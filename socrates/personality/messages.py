@@ -51,7 +51,7 @@ def _format_forgotten_push(facts: dict, quiet: bool = False) -> str:
 
 
 def _format_leaked_secrets(facts: dict, quiet: bool = False) -> str:
-    pattern_names = facts.get("pattern_names", [])
+    pattern_names = facts.get("pattern_types", facts.get("pattern_names", []))
     if pattern_names:
         secret_type = ", ".join(pattern_names)
     else:
@@ -67,8 +67,8 @@ def _format_leaked_secrets(facts: dict, quiet: bool = False) -> str:
 
 
 def _format_silent_failure(facts: dict, quiet: bool = False) -> str:
-    missing_artifact = facts.get("missing_artifact")
-    error_keyword = facts.get("error_keyword")
+    missing_artifact = facts.get("artifact_path", facts.get("missing_artifact"))
+    error_keyword = facts.get("error_keyword", facts.get("symptom"))
     cmd = facts.get("command", "command")
 
     if missing_artifact:
