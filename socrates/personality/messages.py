@@ -60,8 +60,9 @@ def _format_leaked_secrets(facts: dict, quiet: bool = False) -> str:
     if quiet:
         return f"Detected potential secret in command: {secret_type}."
 
+    article = "An" if secret_type[0].lower() in "aeiou" else "A"
     return (
-        f"A {secret_type} sits plainly in that command, for any shell history or log to find.\n"
+        f"{article} {secret_type} sits plainly in that command, for any shell history or log to find.\n"
         f"Tell me — is a secret truly a secret, if you have just shouted it into your terminal?"
     )
 
