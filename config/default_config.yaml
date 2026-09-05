@@ -1,0 +1,96 @@
+# Socrates default configuration
+# All values here can be overridden in ~/.socrates/config.yaml
+
+# ── Detection ─────────────────────────────────────────────────────────────────
+
+# How often the daemon sweeps all known repos for unpushed commits (seconds)
+sweep_interval_seconds: 600
+
+# How often the daemon checks in-flight (currently running) processes against
+# their baseline for stuck-process detection (seconds)
+stuck_sweep_interval_seconds: 30
+
+# Minimum number of historical samples before the stuck-process rule will fire
+# for a given (project_dir, command_signature) pair
+min_baseline_samples: 5
+
+# Stddev multiplier for the stuck-process HIGH/LOW threshold:
+#   LOW_CONFIDENCE  if elapsed > mean + k * sqrt(variance)
+#   HIGH_CONFIDENCE if elapsed > 3 * mean
+baseline_k_factor: 2.0
+
+# ── LLM tiebreaker ────────────────────────────────────────────────────────────
+
+# Enable the Groq LLM tiebreaker for LOW_CONFIDENCE events.
+# If false (or if GROQ_API_KEY is missing), LOW_CONFIDENCE → NONE silently.
+groq_enabled: true
+
+# Groq model to use. Must be a model available on the free tier.
+# The leaked_secrets rule NEVER uses this path, by design.
+groq_model: "openai/gpt-oss-20b"
+
+# Maximum time to wait for a Groq API response (seconds)
+groq_timeout_seconds: 8
+
+# Minimum seconds between consecutive Groq API calls (client-side throttle)
+groq_min_call_interval_seconds: 2
+
+# Seconds to back off after a 429 rate-limit response
+groq_rate_limit_backoff_seconds: 30
+
+# ── Presentation ──────────────────────────────────────────────────────────────
+
+# Enable ANSI color in terminal output.
+# Also disabled by the NO_COLOR environment variable (https://no-color.org/).
+color_enabled: true
+
+# Quiet mode: print plain factual messages only, no Socratic personality.
+quiet_mode: false
+
+# Sound: play a non-verbal audio cue when Socrates speaks.
+# Socrates ships NO default sound file — the user must supply one.
+sound_enabled: false
+sound_file_path: ""   # absolute path to a .wav/.mp3/.aiff/.ogg file
+sound_volume: 1.0     # 0.0 to 1.0
+
+# ── OS Notifications ──────────────────────────────────────────────────────────
+
+# Enable OS-level notification banners (notify-send / osascript).
+# Used for stuck-process alerts and escalation of long-pending messages.
+os_notifications_enabled: true
+
+# Hours of inactivity after a pending message is written before it escalates
+# to an OS notification instead of waiting for a terminal prompt.
+notification_escalation_hours: 2
+
+# ── Daemon ────────────────────────────────────────────────────────────────────
+
+# Unix socket path for shell → daemon communication.
+# Relative paths are resolved from SOCRATES_HOME (default: ~/.socrates/).
+socket_name: "daemon.sock"
+
+# SQLite database filename (inside SOCRATES_HOME).
+db_name: "history.db"
+
+# Pending messages directory name (inside SOCRATES_HOME).
+pending_dir_name: "pending"
+
+# PID file name (inside SOCRATES_HOME).
+pid_file_name: "daemon.pid"
+
+# Daemon log file name (inside SOCRATES_HOME).
+log_file_name: "daemon.log"
+
+# Log level for the daemon: DEBUG, INFO, WARNING, ERROR
+log_level: "INFO"
+
+# Maximum stderr tail size captured per command (bytes).
+# Only applies to SAFE-classified commands.
+max_stderr_tail_bytes: 8192
+
+# Maximum number of events to keep in the database before pruning.
+max_events: 10000
+
+# Orphan in-flight row TTL: rows older than this are purged as stale
+# (for shells that crash without sending postcmd).
+in_flight_orphan_ttl_hours: 24
