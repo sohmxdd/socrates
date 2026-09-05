@@ -78,10 +78,18 @@ class SocratesDaemon:
         # Start the periodic sweep task.
         self._sweep_task = asyncio.create_task(self._run_sweeps(), name="socrates-sweep")
 
-        # Register clean-shutdown signal handlers.
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(sig, self._request_shutdown)
+        # Write PID file
+        pid_path = self.config.pid_path(self.home)
+        pid_path.write_text(str(os.getpid()), encoding="utf-8")
+
+        # Register clean-shutdown signal handlers (POSIX only)
+        if sys.platform != "win32":
+            loop = asyncio.get_running_loop()
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                try:
+                    loop.add_signal_handler(sig, self._request_shutdown)
+                except (NotImplementedError, RuntimeError):
+                    pass
 
         logger.info("Socrates daemon started (PID %d)", os.getpid())
 
@@ -96,12 +104,16 @@ class SocratesDaemon:
         self._shutdown_event.set()
         if self._sweep_task:
             self._sweep_task.cancel()
+        pid_path = self.config.pid_path(self.home)
+        pid_path.unlink(missing_ok=True)
 
     async def stop(self) -> None:
-        """Graceful stop: close socket, clean up socket file."""
+        """Graceful stop: close socket, clean up socket and PID files."""
         self._request_shutdown()
         if self.socket_path.exists():
             self.socket_path.unlink(missing_ok=True)
+        pid_path = self.config.pid_path(self.home)
+        pid_path.unlink(missing_ok=True)
 
     # ── Connection handler ─────────────────────────────────────────────────────
 
@@ -415,11 +427,17 @@ class SocratesDaemon:
             return None
 
     def _deliver(self, result: Any, *, repo_path: str | None) -> None:
-        """Write the result to a pending file for shell pickup (or OS notification)."""
+        """Write the result to a pending file for shell pickup (and optional sound cue)."""
         try:
             from socrates.gate.intervention_gate import InterventionGate
             gate = InterventionGate(self.db_path, self.config, self.home)
             gate.write_pending(result, repo_path=repo_path)
+            if getattr(self.config, "sound_enabled", False):
+                try:
+                    from socrates.presentation.sound import play_sound
+                    play_sound(self.config.sound_file_path, self.config.sound_volume)
+                except Exception:
+                    pass
         except Exception:
             logger.debug("Error delivering result.", exc_info=True)
 
