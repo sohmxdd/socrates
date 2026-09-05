@@ -444,11 +444,12 @@ def upsert_suppression_fired(
     *,
     fingerprint: str,
     rule_type: str,
-    repo_path: Optional[str],
-    branch: Optional[str],
+    repo_path: Optional[str] = None,
+    branch: Optional[str] = None,
+    last_fired_ts: Optional[str] = None,
 ) -> None:
     """Record that an intervention for this fingerprint was fired."""
-    now = utcnow()
+    now = last_fired_ts or utcnow()
     with get_conn(db_path) as conn:
         conn.execute(
             """

@@ -45,6 +45,14 @@ class SocratesConfig:
     stuck_sweep_interval_seconds: int = 30
     min_baseline_samples: int = 5
     baseline_k_factor: float = 2.0
+    active_commit_window_seconds: int = 300
+    dismiss_threshold: int = 3
+    intervention_cooldown_seconds: int = 3600
+    dismiss_widening_factor: float = 1.5
+
+    @property
+    def stuck_k_factor(self) -> float:
+        return self.baseline_k_factor
 
     # LLM tiebreaker
     groq_enabled: bool = True

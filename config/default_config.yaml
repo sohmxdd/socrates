@@ -19,6 +19,20 @@ min_baseline_samples: 5
 #   HIGH_CONFIDENCE if elapsed > 3 * mean
 baseline_k_factor: 2.0
 
+# Window of inactivity before a repo with unpushed commits is flagged.
+# If a commit was made within the last N seconds, the developer is actively
+# committing, so the sweep remains silent.
+active_commit_window_seconds: 300
+
+# Number of times an intervention can be dismissed before being suppressed indefinitely
+dismiss_threshold: 3
+
+# Minimum cooldown between identical interventions (seconds)
+intervention_cooldown_seconds: 3600
+
+# Widening factor applied to thresholds when a rule is frequently dismissed in a repo
+dismiss_widening_factor: 1.5
+
 # ── LLM tiebreaker ────────────────────────────────────────────────────────────
 
 # Enable the Groq LLM tiebreaker for LOW_CONFIDENCE events.
