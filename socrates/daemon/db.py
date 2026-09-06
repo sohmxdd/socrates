@@ -500,3 +500,28 @@ def get_suppression_by_repo(db_path: Path, repo_path: str) -> list[sqlite3.Row]:
             "SELECT * FROM suppression_state WHERE repo_path = ?", (repo_path,)
         )
         return cur.fetchall()
+
+
+def get_recent_commands(
+    db_path: Path,
+    session_id: str,
+    limit: int = 5,
+) -> list[sqlite3.Row]:
+    """Return the most recent completed commands for a session, ordered chronologically."""
+    with get_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT id, command, command_sig, exit_code, cwd, repo_path, start_ts, end_ts
+            FROM (
+                SELECT id, command, command_sig, exit_code, cwd, repo_path, start_ts, end_ts
+                FROM events
+                WHERE session_id = ? AND exit_code IS NOT NULL
+                ORDER BY id DESC
+                LIMIT ?
+            )
+            ORDER BY id ASC
+            """,
+            (session_id, limit),
+        ).fetchall()
+        return rows
+
