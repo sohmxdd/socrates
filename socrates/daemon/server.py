@@ -399,9 +399,11 @@ class SocratesDaemon:
                 self.commentary_gate.write_pending(
                     comment,
                     session_id=session_id,
+                    command=command,
                     repo_path=repo_path,
                     effective_config=effective_config,
                 )
+
                 self.commentary_gate.record_comment(session_id)
         except Exception:
             logger.debug("Error in commentary processing", exc_info=True)

@@ -161,15 +161,16 @@ function Invoke-SocratesPostCmd {
         Invoke-SocratesSendEvent -Json $payload
     } catch {}
 
-    # Brief check for incoming pending commentary (up to 250ms)
+    # Brief poll for incoming commentary from daemon (up to 750ms, exits immediately when ready)
     if (Test-Path $script:SocratesPendingDir) {
-        $deadline = (Get-Date).AddMilliseconds(250)
+        $deadline = (Get-Date).AddMilliseconds(750)
         while ((Get-Date) -lt $deadline) {
             $pending = Get-ChildItem -Path $script:SocratesPendingDir -Filter "*.json" -ErrorAction SilentlyContinue
             if ($pending) { break }
-            Start-Sleep -Milliseconds 40
+            Start-Sleep -Milliseconds 35
         }
     }
+
 
     Invoke-SocratesDeliverPending
 }

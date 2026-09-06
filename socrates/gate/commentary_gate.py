@@ -93,6 +93,7 @@ class CommentaryGate:
         self,
         message: str,
         session_id: str,
+        command: Optional[str] = None,
         repo_path: Optional[str] = None,
         effective_config: Optional[Any] = None,
     ) -> Optional[Path]:
@@ -116,9 +117,11 @@ class CommentaryGate:
             "rule_type": "commentary",
             "is_commentary": True,
             "session_id": session_id,
+            "command": command or "",
             "formatted_message": message.strip(),
             "written_at": datetime.now(timezone.utc).isoformat(),
         }
+
 
         try:
             pending_file.write_text(
