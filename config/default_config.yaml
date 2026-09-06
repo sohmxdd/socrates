@@ -88,7 +88,7 @@ commentary_skip_commands:
 commentary_context_window: 5
 
 # Maximum token budget for commentary LLM generations
-commentary_max_tokens: 150
+commentary_max_tokens: 500
 
 # ── OS Notifications ──────────────────────────────────────────────────────────
 

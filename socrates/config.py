@@ -78,7 +78,7 @@ class SocratesConfig:
     commentary_cooldown_seconds: int = 15
     commentary_skip_commands: list[str] = field(default_factory=lambda: ["clear", "cls", "pwd", "exit"])
     commentary_context_window: int = 5
-    commentary_max_tokens: int = 150
+    commentary_max_tokens: int = 500
 
     # OS Notifications
     os_notifications_enabled: bool = True

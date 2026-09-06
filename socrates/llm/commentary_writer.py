@@ -246,13 +246,13 @@ def _call_groq_commentary(api_key: str, user_content: str, config: Any) -> Optio
     import groq
 
     model = "openai/gpt-oss-20b"
-    timeout = 4.0
-    max_tokens = 150
+    timeout = 6.0
+    max_tokens = 300
 
     if config is not None:
         model = getattr(config, "groq_model", model)
-        timeout = min(float(getattr(config, "groq_timeout_seconds", 8.0)), 5.0)
-        max_tokens = int(getattr(config, "commentary_max_tokens", 150))
+        timeout = min(float(getattr(config, "groq_timeout_seconds", 8.0)), 7.0)
+        max_tokens = max(int(getattr(config, "commentary_max_tokens", 150)), 300)
 
     client = groq.Groq(api_key=api_key, timeout=timeout)
     completion = client.chat.completions.create(
@@ -262,6 +262,6 @@ def _call_groq_commentary(api_key: str, user_content: str, config: Any) -> Optio
             {"role": "user", "content": user_content},
         ],
         temperature=0.9,
-        max_tokens=max(max_tokens, 250),
+        max_tokens=500,
     )
     return completion.choices[0].message.content
