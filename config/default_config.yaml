@@ -67,6 +67,29 @@ sound_enabled: false
 sound_file_path: ""   # absolute path to a .wav/.mp3/.aiff/.ogg file
 sound_volume: 1.0     # 0.0 to 1.0
 
+# ── Commentary (Always-On Mode) ──────────────────────────────────────────────
+# Master toggle for ambient commentary on shell commands
+commentary_enabled: false
+
+# Probability [0.0 - 1.0] that a command receives commentary
+commentary_rate: 0.6
+
+# Minimum cooldown between comments in seconds for a shell session
+commentary_cooldown_seconds: 15
+
+# Commands to skip commentary for
+commentary_skip_commands:
+  - "clear"
+  - "cls"
+  - "pwd"
+  - "exit"
+
+# Number of recent commands to include as context for narrative continuity
+commentary_context_window: 5
+
+# Maximum token budget for commentary LLM generations
+commentary_max_tokens: 150
+
 # ── OS Notifications ──────────────────────────────────────────────────────────
 
 # Enable OS-level notification banners (notify-send / osascript).

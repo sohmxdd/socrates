@@ -72,6 +72,14 @@ class SocratesConfig:
     sound_file_path: str = ""
     sound_volume: float = 1.0
 
+    # Commentary (Always-On Mode)
+    commentary_enabled: bool = False
+    commentary_rate: float = 0.6
+    commentary_cooldown_seconds: int = 15
+    commentary_skip_commands: list[str] = field(default_factory=lambda: ["clear", "cls", "pwd", "exit"])
+    commentary_context_window: int = 5
+    commentary_max_tokens: int = 150
+
     # OS Notifications
     os_notifications_enabled: bool = True
     notification_escalation_hours: float = 2.0
