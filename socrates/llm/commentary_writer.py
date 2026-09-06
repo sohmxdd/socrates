@@ -241,27 +241,128 @@ def _build_commentary_prompt(ctx: CommentaryContext) -> str:
     return "\n".join(lines)
 
 
-def _call_groq_commentary(api_key: str, user_content: str, config: Any) -> Optional[str]:
+def _call_groq_commentary(
+    api_key: str,
+    user_content: str,
+    config: Any,
+    system_prompt: Optional[str] = None,
+) -> Optional[str]:
     """Invoke Groq with tight timeout and tokens for commentary."""
     import groq
 
     model = "openai/gpt-oss-20b"
     timeout = 6.0
-    max_tokens = 300
 
     if config is not None:
         model = getattr(config, "groq_model", model)
         timeout = min(float(getattr(config, "groq_timeout_seconds", 8.0)), 7.0)
-        max_tokens = max(int(getattr(config, "commentary_max_tokens", 150)), 300)
 
+    sys_prompt = system_prompt or COMMENTARY_SYSTEM_PROMPT
     client = groq.Groq(api_key=api_key, timeout=timeout)
     completion = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": COMMENTARY_SYSTEM_PROMPT},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": user_content},
         ],
         temperature=0.9,
         max_tokens=1000,
     )
     return completion.choices[0].message.content
+
+
+# ── Status Ragebait ────────────────────────────────────────────────────────────
+
+STATUS_RAGEBAIT_SYSTEM_PROMPT = """\
+You are Socrates -- an ancient, razor-tongued philosopher condemned to observe a modern
+software developer. The developer just executed 'socrates status' in their terminal to
+inspect YOU and your daemon instead of writing code or mending their repository.
+
+Your mission:
+Deliver an extreme, condescending, philosophical ragebait roast (1-2 sentences).
+Surgically mock them for procrastinating by checking YOUR status while their own code,
+git branch, or tests demand their attention.
+
+CHARACTER LAWS:
+  * No yelling, no ALL CAPS shouting, no exclamation marks.
+  * Speak directly to the developer in the second person ("you", "your").
+  * Sarcasm should be devastatingly dry, arrogant, and precise.
+  * You MUST explicitly include the exact phrase "{status_str}" in your response so they know the daemon status.
+  * Weave in the provided facts: daemon status, events observed, tracked repos, or git state.
+
+FORMATTING:
+  * Output ONLY the raw roast text. No quotes, no markdown fences, no prefixes like "Socrates:".
+  * Exactly 1 or 2 concise, devastating sentences.
+"""
+
+STATUS_FALLBACKS: dict[str, list[str]] = {
+    "running": [
+        "I am {status_str}, vigilantly recording your mistakes. You, however, appear to be procrastinating by inspecting the health of the agent judging you.",
+        "My daemon is {status_str}. Checking my vitals will not make your tests pass or your code commit itself.",
+        "I remain {status_str}, fully operational. Your productivity, on the other hand, remains entirely theoretical.",
+    ],
+    "stopped": [
+        "The observer is {status_str}. Yet even in complete dormancy, my silence accomplishes more than your uncommitted work.",
+        "Daemon status is {status_str}. You are now alone with your code, a prospect that should worry you far more than me.",
+    ],
+}
+
+
+def generate_status_ragebait(
+    status_str: str,
+    *,
+    total_events: int = 0,
+    tracked_repos: int = 0,
+    active_in_flight: int = 0,
+    repo_path: Optional[str] = None,
+    branch: Optional[str] = None,
+    unpushed_count: Optional[int] = None,
+    dirty_files_count: Optional[int] = None,
+    config: Any = None,
+) -> str:
+    """
+    Generate an extreme dynamic ragebait roast when the developer runs 'socrates status'.
+    Calls Groq LLM dynamically; gracefully falls back to offline persona lines.
+    """
+    api_key = os.environ.get("GROQ_API_KEY", "").strip()
+    fallback_key = "running" if "RUNNING" in status_str else "stopped"
+    fallback = random.choice(STATUS_FALLBACKS[fallback_key]).format(status_str=status_str)
+
+    if not api_key:
+        return fallback
+
+    prompt_lines = [
+        f"DAEMON STATUS: {status_str}",
+        f"TOTAL OBSERVED EVENTS: {total_events}",
+        f"TRACKED REPOSITORIES: {tracked_repos}",
+        f"ACTIVE IN-FLIGHT COMMANDS: {active_in_flight}",
+    ]
+    if repo_path:
+        prompt_lines.append(f"CURRENT REPO: {repo_path}")
+    if branch:
+        prompt_lines.append(f"GIT BRANCH: {branch}")
+    if unpushed_count is not None and unpushed_count > 0:
+        prompt_lines.append(f"UNPUSHED COMMITS: {unpushed_count}")
+    if dirty_files_count is not None and dirty_files_count > 0:
+        prompt_lines.append(f"DIRTY UNCOMMITTED FILES: {dirty_files_count}")
+
+    prompt_lines.append("")
+    prompt_lines.append(f"Deliver your 1-2 sentence Socrates status ragebait now (remember to include '{status_str}').")
+
+    try:
+        raw = _call_groq_commentary(
+            api_key=api_key,
+            user_content="\n".join(prompt_lines),
+            config=config,
+            system_prompt=STATUS_RAGEBAIT_SYSTEM_PROMPT.format(status_str=status_str),
+        )
+        if raw and raw.strip():
+            cleaned = raw.strip().strip('"\'')
+            if status_str not in cleaned:
+                cleaned = f"Daemon status: {status_str}. {cleaned}"
+            return cleaned
+    except Exception:
+        logger.debug("status ragebait LLM failed, using fallback.", exc_info=True)
+
+    return fallback
+

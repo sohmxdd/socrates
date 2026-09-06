@@ -125,3 +125,27 @@ def test_generate_commentary_llm_exception_falls_back(monkeypatch):
         # Should gracefully fall back to an offline line
         assert isinstance(comment, str)
         assert comment in OFFLINE_FALLBACKS["git_status"]
+
+
+def test_generate_status_ragebait_offline(monkeypatch):
+    from socrates.llm.commentary_writer import generate_status_ragebait
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    roast = generate_status_ragebait("RUNNING (PID 1234)")
+    assert "RUNNING (PID 1234)" in roast
+    assert isinstance(roast, str)
+
+    stopped_roast = generate_status_ragebait("STOPPED")
+    assert "STOPPED" in stopped_roast
+
+
+def test_generate_status_ragebait_mocked_llm(monkeypatch):
+    from socrates.llm.commentary_writer import generate_status_ragebait
+    monkeypatch.setenv("GROQ_API_KEY", "fake_key_123")
+
+    with patch("socrates.llm.commentary_writer._call_groq_commentary") as mock_groq:
+        mock_groq.return_value = "I am RUNNING (PID 1234). Go fix your broken code instead of inspecting me."
+        roast = generate_status_ragebait("RUNNING (PID 1234)", total_events=5, branch="main")
+        assert "RUNNING (PID 1234)" in roast
+        assert "broken code" in roast
+        mock_groq.assert_called_once()
+

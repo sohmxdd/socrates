@@ -53,6 +53,17 @@ class TestCliStatus:
                 assert res.exit_code == 0
                 assert "RUNNING (PID 99999)" in res.output
 
+    def test_status_metrics_flag(self) -> None:
+        runner = CliRunner()
+        with tempfile.TemporaryDirectory(prefix="socrates_cli_") as tmp:
+            home = Path(tmp)
+            with patch("socrates.cli.get_socrates_home", return_value=home):
+                res = runner.invoke(main, ["status", "--metrics"])
+                assert res.exit_code == 0
+                assert "Terminal Observer Status" in res.output
+                assert "STOPPED" in res.output
+
+
 
 class TestCliStop:
     def test_stop_when_not_running(self) -> None:

@@ -144,49 +144,69 @@ def stop() -> None:
 # ── status ─────────────────────────────────────────────────────────────────────
 
 @main.command()
-def status() -> None:
-    """Show Socrates daemon health, database, and repository statistics."""
+@click.option("--metrics", "-m", is_flag=True, help="Show raw daemon metrics table instead of commentary.")
+def status(metrics: bool) -> None:
+    """Show Socrates daemon status with dynamic ragebait (or --metrics for raw table)."""
     home = get_socrates_home()
     config = load_config()
     db_path = config.db_path(home)
 
     pid = _get_running_pid(config, home)
     is_running = pid is not None
-
-    click.echo("=" * 48)
-    click.echo("  Socrates — Terminal Observer Status")
-    click.echo("=" * 48)
-    if is_running:
-        status_str = f"RUNNING (PID {pid})"
-    else:
-        status_str = "STOPPED"
-    click.echo(f"  Daemon status:        {status_str}")
-    click.echo(f"  Socrates home:        {home}")
-    port_path = home / "daemon.port"
-    if port_path.exists():
-        click.echo(f"  TCP loopback port:    {port_path.read_text(encoding='utf-8').strip()}")
-    else:
-        click.echo(f"  Socket path:          {config.socket_path(home)}")
-    click.echo(f"  Database path:        {db_path}")
+    status_str = f"RUNNING (PID {pid})" if is_running else "STOPPED"
 
     # Database statistics
+    total_events = 0
+    total_suppressions = 0
+    active_in_flight = 0
+    repos: list[dict[str, Any]] = []
     if db_path.exists():
-        size_kb = db_path.stat().st_size / 1024
-        click.echo(f"  Database size:        {size_kb:.1f} KB")
         try:
             from socrates.daemon import db
             repos = db.get_all_known_repos(db_path)
-            events = db.get_recent_events(db_path, limit=1)
             in_flight = db.get_all_in_flight(db_path)
+            active_in_flight = len(in_flight)
 
             with db.get_conn(db_path) as conn:
                 cur = conn.execute("SELECT COUNT(*) FROM events")
                 total_events = cur.fetchone()[0]
                 cur = conn.execute("SELECT COUNT(*) FROM suppression_state")
                 total_suppressions = cur.fetchone()[0]
+        except Exception:
+            pass
 
+    # Git repository context
+    repo_path = None
+    branch = None
+    unpushed_count = 0
+    try:
+        from socrates.daemon.git_watcher import get_repo_root, get_current_branch, count_unpushed_commits
+        repo_root = get_repo_root(Path.cwd())
+        if repo_root:
+            repo_path = str(repo_root)
+            branch = get_current_branch(repo_root)
+            unpushed_count = count_unpushed_commits(repo_root, branch) if branch else 0
+    except Exception:
+        pass
+
+    if metrics:
+        click.echo("=" * 48)
+        click.echo("  Socrates — Terminal Observer Status")
+        click.echo("=" * 48)
+        click.echo(f"  Daemon status:        {status_str}")
+        click.echo(f"  Socrates home:        {home}")
+        port_path = home / "daemon.port"
+        if port_path.exists():
+            click.echo(f"  TCP loopback port:    {port_path.read_text(encoding='utf-8').strip()}")
+        else:
+            click.echo(f"  Socket path:          {config.socket_path(home)}")
+        click.echo(f"  Database path:        {db_path}")
+
+        if db_path.exists():
+            size_kb = db_path.stat().st_size / 1024
+            click.echo(f"  Database size:        {size_kb:.1f} KB")
             click.echo(f"  Total logged events:  {total_events}")
-            click.echo(f"  Active in-flight:     {len(in_flight)}")
+            click.echo(f"  Active in-flight:     {active_in_flight}")
             click.echo(f"  Tracked repositories: {len(repos)}")
             click.echo(f"  Suppression rules:    {total_suppressions}")
 
@@ -195,12 +215,26 @@ def status() -> None:
                 for r in repos[:5]:
                     swept = r["last_swept_ts"] or "never"
                     click.echo(f"    - {r['repo_path']} (last swept: {swept})")
-        except Exception as e:
-            click.echo(f"  Could not read database stats: {e}")
-    else:
-        click.echo("  Database:             Not yet initialized")
+        else:
+            click.echo("  Database:             Not yet initialized")
+        click.echo("=" * 48)
+        return
 
-    click.echo("=" * 48)
+    # Default: Extreme dynamic ragebait from Socrates
+    from socrates.llm.commentary_writer import generate_status_ragebait
+
+    roast = generate_status_ragebait(
+        status_str=status_str,
+        total_events=total_events,
+        tracked_repos=len(repos),
+        active_in_flight=active_in_flight,
+        repo_path=repo_path,
+        branch=branch,
+        unpushed_count=unpushed_count,
+        config=config,
+    )
+    click.echo(format_terminal_message(roast, color_enabled=config.color_enabled))
+
 
 
 # ── logs ───────────────────────────────────────────────────────────────────────
