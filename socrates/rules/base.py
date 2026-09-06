@@ -31,11 +31,12 @@ class Confidence(Enum):
 
 
 class RuleType(str, Enum):
-    """The four detection rules in v1."""
+    """Detection rules and commentary in Socrates."""
     FORGOTTEN_PUSH  = "forgotten_push"
     LEAKED_SECRETS  = "leaked_secrets"
     SILENT_FAILURE  = "silent_failure"
     STUCK_PROCESS   = "stuck_process"
+    COMMENTARY      = "commentary"
 
 
 class CaptureClass(str, Enum):
@@ -96,3 +97,20 @@ class RuleResult:
     def none(cls, rule_type: RuleType) -> "RuleResult":
         """Convenience constructor for a NONE result."""
         return cls(confidence=Confidence.NONE, rule_type=rule_type)
+
+
+@dataclass(frozen=True)
+class CommentaryContext:
+    """
+    Context for generating ambient / ragebait commentary on a command.
+    """
+    session_id:       str
+    command:          str
+    exit_code:        int
+    duration_seconds: float
+    cwd:              str
+    repo_path:        Optional[str] = None
+    stderr_tail:      Optional[str] = None
+    recent_commands:  tuple[str, ...] = field(default_factory=tuple)
+    retry_count:      int = 0
+
