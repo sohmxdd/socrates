@@ -67,4 +67,9 @@ def print_intervention(
     stream = file or sys.stdout
     use_color = should_use_color(color_enabled, stream=stream)
     formatted = format_terminal_message(message, color_enabled=use_color)
-    print(formatted, file=stream)
+    try:
+        print(formatted, file=stream)
+    except UnicodeEncodeError:
+        encoding = getattr(stream, "encoding", None) or "utf-8"
+        safe_text = formatted.encode(encoding, errors="replace").decode(encoding)
+        print(safe_text, file=stream)

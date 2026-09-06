@@ -22,7 +22,7 @@ from socrates.rules.leaked_secrets import check_leaked_secrets
 
 def run_demo() -> None:
     print("\n" + "=" * 60)
-    print("      SOCRATES — TERMINAL WATCHING AGENT DEMO")
+    print("      SOCRATES -- TERMINAL WATCHING AGENT DEMO")
     print("=" * 60 + "\n")
 
     # Scenario 1: Forgotten push
