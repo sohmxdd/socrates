@@ -88,6 +88,34 @@ function Invoke-SocratesFindLocalConfig {
     } catch {}
 }
 
+# ── Event Dispatch ─────────────────────────────────────────────────────────────
+
+function Invoke-SocratesSendEvent {
+    param([string]$Json)
+    try {
+        $portFile = Join-Path $script:SocratesHome "daemon.port"
+        if (Test-Path $portFile) {
+            $port = [int](Get-Content $portFile -Raw).Trim()
+            $tcp = New-Object System.Net.Sockets.TcpClient
+            $tcp.SendTimeout = 500
+            $tcp.Connect([System.Net.IPAddress]::Loopback, $port)
+            if ($tcp.Connected) {
+                $stream = $tcp.GetStream()
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($Json + "`n")
+                $stream.Write($bytes, 0, $bytes.Length)
+                $stream.Flush()
+                $tcp.Close()
+                return
+            }
+        }
+    } catch {}
+
+    # Fallback to client.py if direct loopback TCP fails
+    try {
+        $Json | python $script:SocratesClient 2>$null
+    } catch {}
+}
+
 # ── 2. Preexec: Check Secrets & Notify Daemon ──────────────────────────────────
 
 function Invoke-SocratesPreExec {
@@ -99,7 +127,7 @@ function Invoke-SocratesPreExec {
     $cwd = (Get-Location).Path
 
     # Quick local secret pattern detector for immediate feedback before execution
-    if ($Cmd -match "(AKIA[0-9A-Z]{16}|ghp_[0-9a-zA-Z]{36}|sk_live_[0-9a-zA-Z]{24}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)") {
+    if ($Cmd -match '(AKIA[0-9A-Z]{16}|ghp_[0-9a-zA-Z]{36}|sk_live_[0-9a-zA-Z]{24}|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)') {
         Write-Host ""
         Write-Host "Socrates: " -ForegroundColor Cyan -NoNewline
         Write-Host "An API key or secret token sits plainly in that command line, ready to be preserved in shell history."
@@ -107,7 +135,7 @@ function Invoke-SocratesPreExec {
         Write-Host ""
     }
 
-    # Dispatch preexec JSON event to daemon via client.py
+    # Dispatch preexec JSON event to daemon
     try {
         $payload = @{
             type = "preexec"
@@ -118,10 +146,7 @@ function Invoke-SocratesPreExec {
             capture_class = "SAFE"
         } | ConvertTo-Json -Compress
 
-        Start-Job -ScriptBlock {
-            param($client, $json)
-            $json | python $client 2>$null
-        } -ArgumentList $script:SocratesClient, $payload | Out-Null
+        Invoke-SocratesSendEvent -Json $payload
     } catch {}
 }
 
@@ -130,9 +155,20 @@ function Invoke-SocratesPreExec {
 function Invoke-SocratesPostCmd {
     param([int]$ExitCode)
 
+    # Fallback to history if PSReadLine Enter handler was bypassed
+    if (-not $script:SocratesLastCmd) {
+        try {
+            $h = Get-History -Count 1 -ErrorAction SilentlyContinue
+            if ($h -and $h.CommandLine) {
+                $script:SocratesLastCmd = $h.CommandLine
+                $script:SocratesLastStart = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            }
+        } catch {}
+    }
+
     if ($script:SocratesLastCmd) {
         $cmd = $script:SocratesLastCmd
-        $startTs = $script:SocratesLastStart
+        $startTs = if ($script:SocratesLastStart) { $script:SocratesLastStart } else { (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
         $endTs = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         $cwd = (Get-Location).Path
 
@@ -151,11 +187,18 @@ function Invoke-SocratesPostCmd {
                 capture_class = "SAFE"
             } | ConvertTo-Json -Compress
 
-            Start-Job -ScriptBlock {
-                param($client, $json)
-                $json | python $client 2>$null
-            } -ArgumentList $script:SocratesClient, $payload | Out-Null
+            Invoke-SocratesSendEvent -Json $payload
         } catch {}
+    }
+
+    # Brief check for incoming pending commentary (up to 300ms)
+    if (Test-Path $script:SocratesPendingDir) {
+        $deadline = (Get-Date).AddMilliseconds(300)
+        while ((Get-Date) -lt $deadline) {
+            $pending = Get-ChildItem -Path $script:SocratesPendingDir -Filter "*.json" -ErrorAction SilentlyContinue
+            if ($pending) { break }
+            Start-Sleep -Milliseconds 40
+        }
     }
 
     Invoke-SocratesDeliverPending
@@ -171,14 +214,14 @@ if (Test-Path Function:\prompt) {
 }
 
 function global:prompt {
-    $lastExit = $global:LASTEXITCODE
+    $lastExit = if ($null -ne $global:LASTEXITCODE) { [int]$global:LASTEXITCODE } else { 0 }
     Invoke-SocratesPostCmd -ExitCode $lastExit
     Invoke-SocratesFindLocalConfig
     & $script:OriginalPrompt
 }
 
-# Hook Enter key if PSReadLine is available
-if (Get-Module -Name PSReadLine -ErrorAction SilentlyContinue -or (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) {
+# Hook Enter key if PSReadLine is available (wrapped with parentheses to avoid parameter error)
+if ((Get-Module -Name PSReadLine -ErrorAction SilentlyContinue) -or (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) {
     try {
         Set-PSReadLineKeyHandler -Chord Enter -ScriptBlock {
             $line = ""
@@ -195,3 +238,4 @@ Write-Host "Socrates observer attached to PowerShell." -ForegroundColor Cyan
 Write-Host "Type " -NoNewline
 Write-Host "socrates status" -ForegroundColor Yellow -NoNewline
 Write-Host " to verify daemon connectivity."
+
