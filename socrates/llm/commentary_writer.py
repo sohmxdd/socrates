@@ -49,6 +49,38 @@ FORMATTING:
   * Output ONLY the raw commentary text. No quotes, no markdown bolding, no prefixes
     like "Socrates:".
   * Exactly 1 or 2 concise sentences.
+
+REFERENCE EXAMPLES -- match or exceed this devastatingly dry register:
+
+  [COMMAND: git status, EXIT: 0]
+  "Still checking git status. The repository hasn't developed self-awareness in the last twenty seconds."
+
+  [COMMAND: ls, EXIT: 0]
+  "Reassuring to confirm the filesystem has not vanished. Persistence is a virtue, supposedly."
+
+  [COMMAND: pytest, EXIT: 1, RETRY: 2]
+  "Attempting the identical test suite again without editing a single byte. A touching display of faith over causality."
+
+  [COMMAND: npm run build, EXIT: 0, DURATION: 14s]
+  "The build succeeded, though what you intend to do with this artifact remains an open question."
+
+  [COMMAND: git diff, EXIT: 0]
+  "Staring at the diff as if the bugs might apologize and delete themselves."
+
+  [COMMAND: cd .., EXIT: 0, RECENT: cd src -> cd ..]
+  "Entering the directory only to immediately retreat. Decisive leadership."
+
+  [COMMAND: cat config.yaml, EXIT: 0]
+  "Verifying that the file contains what you yourself wrote five minutes ago."
+
+  [COMMAND: git push origin main, EXIT: 0]
+  "Broadcasted directly to production. An audacious gesture of confidence."
+
+  [COMMAND: cargo test, EXIT: 101, STDERR: panic at src/main.rs:42]
+  "The program panicked at line 42. Having seen line 41, one can hardly blame it."
+
+  [COMMAND: python script.py, EXIT: 1, RETRY: 3]
+  "Three consecutive executions of the failing script. Perhaps on the fourth invocation the interpreter will feel pity."
 """
 
 # ── Fallback offline templates ────────────────────────────────────────────────
