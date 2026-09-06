@@ -1,15 +1,24 @@
 """
 socrates/personality/messages.py — In-character message generation for Socrates.
 
-Requirements (from Section 7):
-  - Pure function: (rule_type, facts, quiet=False) -> str
-  - Zero imports from rules, gate, daemon, or presentation.
-  - Tone rules:
-      * Short rhetorical / mock-Socratic question or observation.
-      * Concrete facts first (counts, durations, branch names, file names).
-      * Dry, slightly theatrical, never blocking.
-      * Max 1–3 lines.
-  - quiet=True: Plain, factual, direct message with no Socratic personality.
+This module is the single public API for producing intervention text.
+It is a dispatcher: it tries the LLM-powered personality writer first,
+then falls back to hardcoded templates when the LLM is unavailable or fails.
+
+Dispatch order for generate_message():
+  1. quiet=True              -> always use the terse factual fallback (no LLM).
+  2. LEAKED_SECRETS          -> always use the hardcoded fallback (never network).
+  3. Otherwise               -> try personality_writer.generate_dynamic_message();
+                               non-empty string -> use it;
+                               empty / error   -> use hardcoded fallback below.
+
+Hardcoded fallbacks (used as offline safety net):
+  - Zero external dependencies at module level (rules, gate, daemon, presentation).
+  - Pure function: (rule_type, facts, quiet=False) -> str.
+  - Tone: short rhetorical / mock-Socratic question or observation.
+  - Concrete facts first (counts, durations, branch names, file names).
+  - Max 1-3 lines.
+  - quiet=True: plain, factual, direct, no persona.
 """
 from __future__ import annotations
 
@@ -19,10 +28,52 @@ from typing import Any
 def generate_message(rule_type: Any, facts: dict, quiet: bool = False) -> str:
     """
     Generate an intervention message for a given rule type and facts dict.
-    If quiet=True, returns a concise factual message with zero persona.
+
+    If quiet=True, returns a concise factual message with zero persona (no LLM).
+    Otherwise, attempts dynamic LLM generation and falls back to hardcoded templates.
     """
     rt = getattr(rule_type, "value", str(rule_type)).lower()
 
+    # --- Quiet mode: always deterministic, never LLM ---
+    if quiet:
+        return _fallback(rt, facts, quiet=True)
+
+    # --- Leaked secrets: never send to LLM regardless of config ---
+    if "leaked_secrets" in rt:
+        return _fallback(rt, facts, quiet=False)
+
+    # --- Dynamic LLM generation with fallback ---
+    try:
+        dynamic = _try_dynamic(rt, facts)
+    except Exception:
+        dynamic = ""
+    if dynamic:
+        return dynamic
+
+    return _fallback(rt, facts, quiet=False)
+
+
+# -- LLM dispatch ---------------------------------------------------------------
+
+def _try_dynamic(rt: str, facts: dict) -> str:
+    """
+    Attempt LLM-powered message generation.  Returns "" on any failure so the
+    caller always falls back gracefully.  Imports are lazy to keep module load
+    fast and to avoid hard dependency on the llm package.
+    """
+    try:
+        from socrates.llm.personality_writer import generate_dynamic_message
+        from socrates.config import load_config
+        config = load_config()
+        return generate_dynamic_message(rt, facts, config=config)
+    except Exception:
+        return ""
+
+
+# -- Hardcoded fallback templates -----------------------------------------------
+
+def _fallback(rt: str, facts: dict, quiet: bool) -> str:
+    """Route to the appropriate hardcoded fallback template."""
     if "forgotten_push" in rt:
         return _format_forgotten_push(facts, quiet=quiet)
     elif "leaked_secrets" in rt:
@@ -46,7 +97,7 @@ def _format_forgotten_push(facts: dict, quiet: bool = False) -> str:
     snooze_hint = "(run 'socrates snooze' to mute this branch for today)"
     return (
         f"You have created {count} {plural} on '{branch}', yet they remain trapped upon this machine.\n"
-        f"Tell me — what is the purpose of a commit that nobody can pull? {snooze_hint}"
+        f"Tell me -- what is the purpose of a commit that nobody can pull? {snooze_hint}"
     )
 
 
@@ -63,7 +114,7 @@ def _format_leaked_secrets(facts: dict, quiet: bool = False) -> str:
     article = "An" if secret_type[0].lower() in "aeiou" else "A"
     return (
         f"{article} {secret_type} sits plainly in that command, for any shell history or log to find.\n"
-        f"Tell me — is a secret truly a secret, if you have just shouted it into your terminal?"
+        f"Tell me -- is a secret truly a secret, if you have just shouted it into your terminal?"
     )
 
 
@@ -77,7 +128,7 @@ def _format_silent_failure(facts: dict, quiet: bool = False) -> str:
             return f"Command exited 0 but expected artifact was not created: '{missing_artifact}'."
         return (
             f"The command claimed success with exit code 0, yet '{missing_artifact}' does not exist.\n"
-            f"Tell me — which one of you is lying?"
+            f"Tell me -- which one of you is lying?"
         )
 
     if error_keyword:
@@ -85,7 +136,7 @@ def _format_silent_failure(facts: dict, quiet: bool = False) -> str:
             return f"Command exited 0 but produced error in stderr: '{error_keyword}'."
         return (
             f"The command exited with code 0, yet stderr reports '{error_keyword}'.\n"
-            f"Tell me — what does success truly mean to you?"
+            f"Tell me -- what does success truly mean to you?"
         )
 
     if quiet:
@@ -93,7 +144,7 @@ def _format_silent_failure(facts: dict, quiet: bool = False) -> str:
 
     return (
         f"The command returned exit code 0, and yet all evidence suggests it did not succeed.\n"
-        f"Tell me — if an error occurs in a shell and nobody checks its stderr, was it truly successful?"
+        f"Tell me -- if an error occurs in a shell and nobody checks its stderr, was it truly successful?"
     )
 
 
@@ -110,7 +161,7 @@ def _format_stuck_process(facts: dict, quiet: bool = False) -> str:
 
     return (
         f"Process '{cmd}' normally finishes in {mean_str}. It has now been running for {elapsed_str}.\n"
-        f"Tell me — at what point does 'running' become 'waiting'?"
+        f"Tell me -- at what point does 'running' become 'waiting'?"
     )
 
 
