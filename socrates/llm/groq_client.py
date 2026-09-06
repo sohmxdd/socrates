@@ -157,7 +157,7 @@ class GroqClient:
                         {"role": "user", "content": user_content},
                     ],
                     temperature=0.1,
-                    max_tokens=150,
+                    max_tokens=600,
                 )
 
                 content = completion.choices[0].message.content or ""

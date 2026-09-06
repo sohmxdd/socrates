@@ -22,7 +22,11 @@ import yaml
 
 def get_socrates_home() -> Path:
     """Return the Socrates home directory, creating it if necessary."""
-    home = Path(os.environ.get("SOCRATES_HOME", Path.home() / ".socrates"))
+    env_home = os.environ.get("SOCRATES_HOME")
+    if env_home:
+        home = Path(env_home)
+    else:
+        home = Path.home() / ".socrates"
     home.mkdir(parents=True, exist_ok=True)
     return home
 
@@ -110,6 +114,28 @@ class SocratesConfig:
 
 # ── Loader ─────────────────────────────────────────────────────────────────────
 
+def _load_env(home: Optional[Path] = None) -> None:
+    """Load environment variables from ~/.socrates/.env if present."""
+    h = home or get_socrates_home()
+    env_file = h / ".env"
+    if not env_file.is_file():
+        return
+    try:
+        with env_file.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip("'\"")
+                    if key:
+                        os.environ[key] = val
+    except Exception:
+        pass
+
+
 def _load_yaml(path: Path) -> dict:
     """Load a YAML file, returning an empty dict if it doesn't exist."""
     if not path.exists():
@@ -128,6 +154,7 @@ def load_config(user_config_path: Optional[Path] = None) -> SocratesConfig:
         2. Shipped defaults: config/default_config.yaml
         3. Dataclass defaults (hardcoded fallback)
     """
+    _load_env()
     defaults = _load_yaml(_default_config_path())
     user = _load_yaml(user_config_path or _user_config_path())
 
@@ -138,3 +165,4 @@ def load_config(user_config_path: Optional[Path] = None) -> SocratesConfig:
     filtered = {k: v for k, v in merged.items() if k in known_fields}
 
     return SocratesConfig(**filtered)
+

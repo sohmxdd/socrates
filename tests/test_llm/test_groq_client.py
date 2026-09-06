@@ -48,6 +48,22 @@ class TestGroqClientAvailability:
         client = GroqClient(cfg, api_key="gsk_test_key_123")
         assert client.is_available is True
 
+    def test_load_env_from_socrates_home(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from socrates.config import load_config
+        with tempfile.TemporaryDirectory(prefix="socrates_env_") as tmp:
+            tmp_path = Path(tmp)
+            env_file = tmp_path / ".env"
+            env_file.write_text("GROQ_API_KEY=gsk_from_env_file\n", encoding="utf-8")
+
+            with patch.dict(os.environ, {"SOCRATES_HOME": str(tmp_path)}, clear=True):
+                cfg = load_config()
+                assert os.environ.get("GROQ_API_KEY") == "gsk_from_env_file"
+                client = GroqClient(cfg)
+                assert client.is_available is True
+                assert client._api_key == "gsk_from_env_file"
+
 
 class TestGroqClientRouting:
     def test_leaked_secrets_never_sent_to_groq(self) -> None:
