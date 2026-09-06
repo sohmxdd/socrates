@@ -43,13 +43,24 @@ def main() -> None:
 
     # Connect and send — fire-and-forget.
     try:
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.settimeout(0.5)  # Never block the shell for more than 500ms
-        sock.connect(socket_path)
-        sock.sendall(payload)
-        sock.close()
-    except (OSError, socket.timeout):
-        # Daemon not running, socket missing, or send failed — all silent.
+        if hasattr(socket, "AF_UNIX") and os.path.exists(socket_path):
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(0.5)  # Never block the shell for more than 500ms
+            sock.connect(socket_path)
+            sock.sendall(payload)
+            sock.close()
+        else:
+            port_path = os.path.join(socrates_home, "daemon.port")
+            if os.path.exists(port_path):
+                with open(port_path, "r", encoding="utf-8") as f:
+                    port = int(f.read().strip())
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                sock.connect(("127.0.0.1", port))
+                sock.sendall(payload)
+                sock.close()
+    except (OSError, socket.timeout, ValueError):
+        # Daemon not running, socket/port missing, or send failed — all silent.
         pass
 
 

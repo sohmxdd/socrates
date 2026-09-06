@@ -134,9 +134,10 @@ def stop() -> None:
     except OSError:
         pass
 
-    # Clean up PID and socket files
+    # Clean up PID, socket, and port files
     config.pid_path(home).unlink(missing_ok=True)
     config.socket_path(home).unlink(missing_ok=True)
+    (home / "daemon.port").unlink(missing_ok=True)
     click.echo("Socrates daemon stopped.")
 
 
@@ -161,7 +162,11 @@ def status() -> None:
         status_str = "STOPPED"
     click.echo(f"  Daemon status:        {status_str}")
     click.echo(f"  Socrates home:        {home}")
-    click.echo(f"  Socket path:          {config.socket_path(home)}")
+    port_path = home / "daemon.port"
+    if port_path.exists():
+        click.echo(f"  TCP loopback port:    {port_path.read_text(encoding='utf-8').strip()}")
+    else:
+        click.echo(f"  Socket path:          {config.socket_path(home)}")
     click.echo(f"  Database path:        {db_path}")
 
     # Database statistics
@@ -401,5 +406,28 @@ def uninstall_daemon() -> None:
         click.echo(f"uninstall-daemon is supported on macOS and Linux. Current platform: {sys.platform}")
 
 
+# ── demo ───────────────────────────────────────────────────────────────────────
+
+@main.command()
+@click.option("--interactive", "-i", is_flag=True, help="Launch interactive menu for live video demo.")
+def demo(interactive: bool) -> None:
+    """Run demonstration showcase of Socrates detection rules and personality."""
+    import importlib.util
+    demo_script = Path(__file__).resolve().parent.parent / "scripts" / "demo.py"
+    if not demo_script.exists():
+        click.echo("Demo script not found at scripts/demo.py")
+        return
+
+    spec = importlib.util.spec_from_file_location("socrates_demo", str(demo_script))
+    if spec and spec.loader:
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        if interactive and hasattr(mod, "run_interactive"):
+            mod.run_interactive()
+        elif hasattr(mod, "run_demo"):
+            mod.run_demo()
+
+
 if __name__ == "__main__":
     main()
+

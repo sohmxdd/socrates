@@ -66,14 +66,28 @@ class SocratesDaemon:
         if self.socket_path.exists():
             self.socket_path.unlink()
 
-        self._server = await asyncio.start_unix_server(
-            self._handle_connection,
-            path=str(self.socket_path),
-        )
-        logger.info("Socrates daemon listening on %s", self.socket_path)
-
-        # Set restrictive permissions on the socket (owner r/w only).
-        os.chmod(str(self.socket_path), 0o600)
+        if hasattr(asyncio, "start_unix_server") and sys.platform != "win32":
+            self._server = await asyncio.start_unix_server(
+                self._handle_connection,
+                path=str(self.socket_path),
+            )
+            logger.info("Socrates daemon listening on %s", self.socket_path)
+            try:
+                os.chmod(str(self.socket_path), 0o600)
+            except OSError:
+                pass
+        else:
+            # Windows fallback: loopback TCP server on 127.0.0.1
+            self._server = await asyncio.start_server(
+                self._handle_connection,
+                host="127.0.0.1",
+                port=0,
+            )
+            sockets = self._server.sockets or []
+            port = sockets[0].getsockname()[1] if sockets else 0
+            port_path = self.home / "daemon.port"
+            port_path.write_text(str(port), encoding="utf-8")
+            logger.info("Socrates daemon listening on 127.0.0.1:%d", port)
 
         # Start the periodic sweep task.
         self._sweep_task = asyncio.create_task(self._run_sweeps(), name="socrates-sweep")
@@ -106,6 +120,8 @@ class SocratesDaemon:
             self._sweep_task.cancel()
         pid_path = self.config.pid_path(self.home)
         pid_path.unlink(missing_ok=True)
+        port_path = self.home / "daemon.port"
+        port_path.unlink(missing_ok=True)
 
     async def stop(self) -> None:
         """Graceful stop: close socket, clean up socket and PID files."""
@@ -114,6 +130,8 @@ class SocratesDaemon:
             self.socket_path.unlink(missing_ok=True)
         pid_path = self.config.pid_path(self.home)
         pid_path.unlink(missing_ok=True)
+        port_path = self.home / "daemon.port"
+        port_path.unlink(missing_ok=True)
 
     # ── Connection handler ─────────────────────────────────────────────────────
 
