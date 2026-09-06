@@ -500,7 +500,134 @@ def config_show(cwd: Optional[str]) -> None:
     click.echo(f"quiet_mode:                  {cfg.quiet_mode}")
 
 
+# ── commentary ─────────────────────────────────────────────────────────────────
+
+@main.group()
+def commentary() -> None:
+    """Manage Socrates ambient commentary mode."""
+    pass
+
+
+@commentary.command(name="on")
+@click.option("--rate", type=float, default=None, help="Commentary trigger rate (0.0 to 1.0).")
+@click.option("--local", "scope_local", is_flag=True, help="Update .socrates.yaml in current directory.")
+@click.option("--global", "scope_global", is_flag=True, help="Update global ~/.socrates/config.yaml.")
+def commentary_on(rate: Optional[float], scope_local: bool, scope_global: bool) -> None:
+    """Enable ambient commentary."""
+    import yaml
+    from socrates.config import find_local_config, _user_config_path
+
+    # Determine target file
+    target: Path
+    if scope_local:
+        target = Path.cwd() / ".socrates.yaml"
+    elif scope_global:
+        target = _user_config_path()
+    else:
+        # Default to local if local exists, otherwise global
+        loc = find_local_config(Path.cwd())
+        target = loc if loc else _user_config_path()
+
+    data: dict = {}
+    if target.exists():
+        try:
+            with open(target, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except Exception:
+            data = {}
+
+    data["commentary_enabled"] = True
+    if rate is not None:
+        data["commentary_rate"] = rate
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, default_flow_style=False)
+
+    click.echo(f"Enabled Socrates ambient commentary in {target}")
+    if rate is not None:
+        click.echo(f"Commentary rate set to {rate}")
+
+
+@commentary.command(name="off")
+@click.option("--local", "scope_local", is_flag=True, help="Update .socrates.yaml in current directory.")
+@click.option("--global", "scope_global", is_flag=True, help="Update global ~/.socrates/config.yaml.")
+def commentary_off(scope_local: bool, scope_global: bool) -> None:
+    """Disable ambient commentary."""
+    import yaml
+    from socrates.config import find_local_config, _user_config_path
+
+    target: Path
+    if scope_local:
+        target = Path.cwd() / ".socrates.yaml"
+    elif scope_global:
+        target = _user_config_path()
+    else:
+        loc = find_local_config(Path.cwd())
+        target = loc if loc else _user_config_path()
+
+    data: dict = {}
+    if target.exists():
+        try:
+            with open(target, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except Exception:
+            data = {}
+
+    data["commentary_enabled"] = False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, default_flow_style=False)
+
+    click.echo(f"Disabled Socrates ambient commentary in {target}")
+
+
+@commentary.command(name="status")
+@click.option("--cwd", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=None, help="Working directory.")
+def commentary_status(cwd: Optional[str]) -> None:
+    """Show current commentary configuration and active scope."""
+    from socrates.config import find_local_config, load_config_for_cwd, _user_config_path
+
+    target_cwd = Path(cwd).resolve() if cwd else Path.cwd().resolve()
+    cfg = load_config_for_cwd(target_cwd)
+    local_cfg = find_local_config(target_cwd)
+
+    status_str = "ENABLED" if cfg.commentary_enabled else "DISABLED"
+    click.echo(f"Commentary Status: {status_str}")
+    click.echo(f"Active Scope:      {'Local project (' + str(local_cfg) + ')' if local_cfg else 'Global'}")
+    click.echo(f"Rate:              {cfg.commentary_rate} ({int(cfg.commentary_rate * 100)}% chance)")
+    click.echo(f"Cooldown:          {cfg.commentary_cooldown_seconds}s between comments")
+    click.echo(f"Skip Commands:     {', '.join(cfg.commentary_skip_commands)}")
+
+
+@commentary.command(name="test")
+@click.argument("cmd", default="git status")
+@click.option("--exit-code", type=int, default=0, help="Simulated exit code.")
+@click.option("--retries", type=int, default=0, help="Simulated retry count.")
+def commentary_test(cmd: str, exit_code: int, retries: int) -> None:
+    """Test what Socrates would observe for a given command without running it."""
+    from socrates.config import load_config_for_cwd
+    from socrates.rules.base import CommentaryContext
+    from socrates.llm.commentary_writer import generate_commentary
+    from socrates.presentation.terminal import print_commentary
+
+    cfg = load_config_for_cwd(Path.cwd())
+    ctx = CommentaryContext(
+        session_id="test-session",
+        command=cmd,
+        exit_code=exit_code,
+        duration_seconds=0.42,
+        cwd=str(Path.cwd()),
+        recent_commands=("git status", "git diff", cmd),
+        retry_count=retries,
+    )
+
+    comment = generate_commentary(ctx, config=cfg)
+    print_commentary(comment, color_enabled=cfg.color_enabled)
+
+
 if __name__ == "__main__":
     main()
+
 
 
