@@ -37,12 +37,36 @@ def should_use_color(color_enabled: bool = True, stream: Optional[TextIO] = None
     return True
 
 
+def sanitize_terminal_text(text: str) -> str:
+    """
+    Replace Unicode punctuation characters that cause encoding failures
+    on legacy Windows consoles (cp1252, cp437) with standard ASCII equivalents.
+    """
+    replacements = {
+        "\u2011": "-",   # non-breaking hyphen
+        "\u2012": "-",   # figure dash
+        "\u2013": "--",  # en dash
+        "\u2014": "--",  # em dash
+        "\u2018": "'",   # left single quotation mark
+        "\u2019": "'",   # right single quotation mark
+        "\u201a": ",",   # single low-9 quotation mark
+        "\u201c": '"',   # left double quotation mark
+        "\u201d": '"',   # right double quotation mark
+        "\u2026": "...", # horizontal ellipsis
+        "\u00a0": " ",   # non-breaking space
+        "\u202f": " ",   # narrow no-break space
+    }
+    for orig, repl in replacements.items():
+        text = text.replace(orig, repl)
+    return text
+
+
 def format_terminal_message(message: str, color_enabled: bool = True) -> str:
     """
     Format an intervention message with the 'Socrates:' prefix.
     If the message already starts with 'Socrates:', style the prefix cleanly.
     """
-    message = message.strip()
+    message = sanitize_terminal_text(message.strip())
     prefix_text = "Socrates:"
 
     if message.startswith("Socrates:"):
@@ -60,7 +84,7 @@ def format_commentary_message(message: str, color_enabled: bool = True) -> str:
     """
     Format an ambient commentary message with the 'Socrates observes:' prefix in amber.
     """
-    message = message.strip()
+    message = sanitize_terminal_text(message.strip())
     prefix_text = "Socrates observes:"
 
     if message.startswith("Socrates observes:"):

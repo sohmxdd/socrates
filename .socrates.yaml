@@ -1,0 +1,11 @@
+# Socrates Project Configuration
+# Created by `socrates init`
+
+# Ambient commentary mode
+commentary_enabled: true
+commentary_rate: 1.0
+commentary_cooldown_seconds: 2
+
+# Commands to skip commentary for
+commentary_skip_commands:
+  - "exit"

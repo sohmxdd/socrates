@@ -19,7 +19,22 @@ $script:SocratesLastHistoryId = if ($initH) { $initH.Id } else { -1 }
 function Invoke-SocratesDeliverPending {
     if (-not (Test-Path $script:SocratesPendingDir)) { return }
 
-    # Identify git repo root if inside a git directory
+    # Purge stale pending files older than 30 seconds so old files never linger
+    try {
+        Get-ChildItem -Path $script:SocratesPendingDir -Filter "*.json" -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTime -lt (Get-Date).AddSeconds(-30) } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+    } catch {}
+
+    $filesToInspect = @()
+
+    # 1. Check for session-specific commentary
+    $sessFile = Join-Path $script:SocratesPendingDir "commentary_$($script:SocratesSessionId).json"
+    if (Test-Path $sessFile) {
+        $filesToInspect += $sessFile
+    }
+
+    # 2. Check for repo-specific interventions
     $repoRoot = $null
     try {
         $gitOut = git rev-parse --show-toplevel 2>$null
@@ -28,7 +43,6 @@ function Invoke-SocratesDeliverPending {
         }
     } catch {}
 
-    $filesToInspect = @()
     if ($repoRoot) {
         $sha = [System.Security.Cryptography.SHA256]::Create()
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($repoRoot)
@@ -39,9 +53,13 @@ function Invoke-SocratesDeliverPending {
         }
     }
 
+    # 3. Any other pending interventions (excluding other sessions' commentary)
     $allPending = Get-ChildItem -Path $script:SocratesPendingDir -Filter "*.json" -ErrorAction SilentlyContinue
     foreach ($item in $allPending) {
         if (-not ($filesToInspect -contains $item.FullName)) {
+            if ($item.Name -like "commentary_*.json" -and $item.Name -ne "commentary_$($script:SocratesSessionId).json") {
+                continue
+            }
             $filesToInspect += $item.FullName
         }
     }
@@ -161,13 +179,13 @@ function Invoke-SocratesPostCmd {
         Invoke-SocratesSendEvent -Json $payload
     } catch {}
 
-    # Brief poll for incoming commentary from daemon (up to 750ms, exits immediately when ready)
+    # Brief poll for incoming commentary from daemon (up to 800ms, exits immediately when ready)
     if (Test-Path $script:SocratesPendingDir) {
-        $deadline = (Get-Date).AddMilliseconds(750)
+        $myPending = Join-Path $script:SocratesPendingDir "commentary_$($script:SocratesSessionId).json"
+        $deadline = (Get-Date).AddMilliseconds(800)
         while ((Get-Date) -lt $deadline) {
-            $pending = Get-ChildItem -Path $script:SocratesPendingDir -Filter "*.json" -ErrorAction SilentlyContinue
-            if ($pending) { break }
-            Start-Sleep -Milliseconds 35
+            if (Test-Path $myPending) { break }
+            Start-Sleep -Milliseconds 30
         }
     }
 

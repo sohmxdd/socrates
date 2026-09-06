@@ -634,13 +634,19 @@ class SocratesDaemon:
 def configure_logging(config: SocratesConfig, home: Path) -> None:
     """Configure logging to a file in the Socrates home directory."""
     log_path = config.log_path(home)
+    handlers: list[logging.Handler] = [
+        logging.FileHandler(str(log_path), encoding="utf-8"),
+    ]
+    if sys.stdout is not None:
+        try:
+            handlers.append(logging.StreamHandler(sys.stdout))
+        except Exception:
+            pass
+
     logging.basicConfig(
         level=getattr(logging, config.log_level.upper(), logging.INFO),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        handlers=[
-            logging.FileHandler(str(log_path), encoding="utf-8"),
-            logging.StreamHandler(sys.stdout),
-        ],
+        handlers=handlers,
     )
 
 

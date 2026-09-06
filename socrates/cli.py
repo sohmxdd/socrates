@@ -93,18 +93,24 @@ def start(foreground: bool) -> None:
         run_daemon(config=config, home=home)
     else:
         # Spawn detached background process
+        log_path = config.log_path(home)
+        log_file = open(str(log_path), "a", encoding="utf-8")
         cmd = [sys.executable, "-m", "socrates.cli", "start", "--foreground"]
         kwargs: dict = {
-            "stdout": subprocess.DEVNULL,
-            "stderr": subprocess.DEVNULL,
+            "stdout": log_file,
+            "stderr": log_file,
             "stdin": subprocess.DEVNULL,
         }
         if sys.platform != "win32":
             kwargs["start_new_session"] = True
+            proc = subprocess.Popen(cmd, **kwargs)
         else:
-            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
-
-        proc = subprocess.Popen(cmd, **kwargs)
+            flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+            CREATE_BREAKAWAY_FROM_JOB = 0x01000000
+            try:
+                proc = subprocess.Popen(cmd, creationflags=flags | CREATE_BREAKAWAY_FROM_JOB, **kwargs)
+            except OSError:
+                proc = subprocess.Popen(cmd, creationflags=flags, **kwargs)
         # Give it a moment to initialize
         time.sleep(0.5)
 
@@ -233,7 +239,12 @@ def status(metrics: bool) -> None:
         unpushed_count=unpushed_count,
         config=config,
     )
-    click.echo(format_terminal_message(roast, color_enabled=config.color_enabled))
+    formatted = format_terminal_message(roast, color_enabled=config.color_enabled)
+    try:
+        click.echo(formatted)
+    except UnicodeEncodeError:
+        encoding = sys.stdout.encoding or "ascii"
+        click.echo(formatted.encode(encoding, errors="replace").decode(encoding))
 
 
 

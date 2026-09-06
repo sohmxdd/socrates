@@ -105,15 +105,16 @@ class CommentaryGate:
         pending_dir = cfg.pending_dir(self.home)
         pending_dir.mkdir(parents=True, exist_ok=True)
 
-        if repo_path:
-            key = hashlib.sha256(repo_path.encode()).hexdigest()[:16]
-        else:
-            key = hashlib.sha256(session_id.encode()).hexdigest()[:16]
+        # Key commentary pending files directly by session_id so each shell session
+        # immediately and unambiguously consumes its own commentary.
+        safe_session = "".join(c for c in session_id if c.isalnum() or c in ("-", "_"))[:36]
+        if not safe_session:
+            safe_session = "default"
 
-        pending_file = pending_dir / f"commentary_{key}.json"
+        pending_file = pending_dir / f"commentary_{safe_session}.json"
 
         payload = {
-            "fingerprint": f"commentary_{key}_{int(time.time())}",
+            "fingerprint": f"commentary_{safe_session}_{int(time.time())}",
             "rule_type": "commentary",
             "is_commentary": True,
             "session_id": session_id,

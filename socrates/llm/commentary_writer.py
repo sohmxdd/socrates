@@ -67,6 +67,12 @@ ICONIC REFERENCE EXAMPLES (Match this exact mind-twisting energy):
   [COMMAND: git log -n 3 --oneline, EXIT: 0]
   Tell me, why do you browse your past commits so fondly? Do you search the chronicle for wisdom, or do you simply take pleasure in admiring a museum of your own missteps?
 
+  [COMMAND: git branch -a, EXIT: 0]
+  Tell me, developer: by listing all the branches of your repository, do you search for alternate realities where your code actually works, or are you merely seeking refuge in the illusion of limitless options?
+
+  [COMMAND: git checkout -b feat/redesign, EXIT: 0]
+  Tell me, mortal: did you create a new branch because you have a coherent architectural plan, or do you simply enjoy fleeing to a new territory before anyone inspects the ruins of your last one?
+
   [COMMAND: ls, EXIT: 0]
   You list the contents of the directory once more. Tell me: did you fear the filesystem had vanished into the ether, or does the sight of familiar filenames bring comfort to a troubled mind?
 
@@ -79,11 +85,23 @@ ICONIC REFERENCE EXAMPLES (Match this exact mind-twisting energy):
   [COMMAND: python script.py, EXIT: 1, RETRY: 3]
   Three consecutive failures of the identical script. Tell me: which will expire first—the CPU cycles of your machine, or your stubborn refusal to acknowledge cause and effect?
 
-  [COMMAND: cat config.yaml, EXIT: 0]
+  [COMMAND: cat config.yaml / type config.yaml, EXIT: 0]
   You inspect the file you yourself authored five minutes ago. Tell me: do you doubt your memory, or do you simply mistrust the stranger who wrote those lines?
+
+  [COMMAND: clear / cls, EXIT: 0]
+  Tell me, mortal: by clearing the terminal screen, do you genuinely believe your previous errors have ceased to exist, or do you merely prefer your catastrophes out of sight?
+
+  [COMMAND: whoami, EXIT: 0]
+  You query the system with `whoami`. Tell me, developer: is this an identity crisis, or do you expect an operating system daemon to uncover the soul you bartered away for software engineering?
+
+  [COMMAND: rm -rf dist / del / Remove-Item, EXIT: 0]
+  Tell me, developer: when you obliterate the file, did the problem vanish from reality, or did you merely incinerate the evidence of your bewilderment?
 
   [COMMAND: pip install / npm install, EXIT: 0]
   Tell me, developer: when you import five hundred third-party dependencies to center a string, are you building an application, or are you constructing a monument to other people's labor?
+
+  [COMMAND: docker run / docker build, EXIT: 0]
+  You encapsulate your program in a container. Tell me, mortal: if the application is flawed upon your host machine, why do you believe locking it in virtual isolation will teach it virtue?
 """
 
 # ── Fallback offline templates ────────────────────────────────────────────────
@@ -105,6 +123,46 @@ OFFLINE_FALLBACKS: dict[str, list[str]] = {
     "git_commit": [
         "Another commit sealed into eternity. Tell me, developer: was that commit message an honest description, or a creative fiction to appease your conscience?",
         "Tell me: does recording a commit bring you closer to a functioning program, or merely document the progression of your errors?",
+    ],
+    "git_branch": [
+        "Tell me, developer: by listing your git branches, do you seek parallel universes where your code functions, or are you merely overwhelmed by the illusions of choice you have created?",
+        "Tell me, mortal: what solace does a tree of divergent branches offer, when not a single one contains software worthy of production?",
+    ],
+    "git_log": [
+        "Tell me, why do you browse past commits so fondly? Do you search the chronicle for wisdom, or do you simply take pleasure in admiring a museum of your own missteps?",
+        "You read the git log once more. Tell me, developer: does reviewing your past decisions give you insight, or merely a documented record of how optimism gradually turned into regret?",
+    ],
+    "git_checkout": [
+        "Tell me, mortal: did you switch branches because you have a plan, or do you simply enjoy abandoning one disaster in order to cultivate another?",
+        "A fresh branch selected. Tell me, traveller: do the bugs remain on the old branch, or did you bring them along as your intellectual baggage?",
+    ],
+    "git_add": [
+        "You stage these changes for posterity. Tell me, developer: are you certain you wish the git history to remember you authored this?",
+        "Staging modifications. Tell me, mortal: is that confidence, or do you plan to commit before your conscience catches up with you?",
+    ],
+    "whoami": [
+        "You ask the machine `whoami`. Tell me, developer: is this a privilege check, or do you expect the terminal to uncover the soul you bartered away for programming?",
+        "Tell me, mortal: if the console answers who you are, will that satisfy your existential void, or merely confirm that you are running as an unprivileged user?",
+    ],
+    "clear": [
+        "Tell me, mortal: by wiping the console buffer, do you believe the errors have ceased to exist, or do you simply prefer your catastrophes out of sight?",
+        "A blank terminal screen. Tell me, developer: does erasing the history of your mistakes grant you absolution, or merely a clean slate upon which to fail anew?",
+    ],
+    "delete": [
+        "Tell me, developer: when you delete the file, did the problem vanish from reality, or did you merely erase the evidence of your failure?",
+        "Removing files. Tell me, mortal: is destruction your preferred method of debugging, or did you simply run out of patience for your own creation?",
+    ],
+    "read_file": [
+        "You print the contents of the file to the console. Tell me, mortal: do you inspect it with genuine comprehension, or are you merely bathing in the illusion of knowledge?",
+        "Gazing upon the source text. Tell me, developer: do you doubt your own memory, or do you simply mistrust the stranger who wrote those lines?",
+    ],
+    "install": [
+        "Tell me, developer: when you download hundreds of third-party packages to center a string, are you building software, or are you constructing a monument to other people's labor?",
+        "Installing external dependencies. Tell me, mortal: how many thousands of unknown lines of JavaScript must you import before you feel secure in your craft?",
+    ],
+    "docker": [
+        "You encapsulate the application in a container. Tell me, mortal: if the code refuses to behave on your host machine, why do you believe putting it behind virtual bars will teach it discipline?",
+        "Containerizing the environment. Tell me, developer: are you solving dependency conflicts, or are you merely packaging your confusion so it may be reproduced on other machines?",
     ],
     "ls": [
         "Tell me, mortal: did you fear the filesystem had evaporated into the void, or does gazing upon familiar file names bring comfort to your troubled mind?",
@@ -130,7 +188,6 @@ OFFLINE_FALLBACKS: dict[str, list[str]] = {
         "Exit code {exit_code}. Tell me, developer: is the terminal cruel for reporting failure, or was it merely honoring the flaws you so carefully typed into it?",
         "Command concluded with exit code {exit_code}. Tell me, mortal: which is more tragic—the code that fails because of your ignorance, or the code that succeeds despite it?",
     ],
-
     "arrival": [
         "Arriving in a new workspace. Tell me, traveller: do you believe a fresh folder grants a fresh intellect, or will the familiar errors take root here as well?",
         "You enter a new directory. Tell me: did you leave your bugs behind, or have they accompanied you like an invisible shadow?",
@@ -169,6 +226,27 @@ def _select_fallback(ctx: CommentaryContext) -> str:
         return random.choice(OFFLINE_FALLBACKS["git_push"])
     if cmd_lower.startswith("git commit"):
         return random.choice(OFFLINE_FALLBACKS["git_commit"])
+    if cmd_lower.startswith("git branch"):
+        return random.choice(OFFLINE_FALLBACKS["git_branch"])
+    if cmd_lower.startswith("git log"):
+        return random.choice(OFFLINE_FALLBACKS["git_log"])
+    if cmd_lower.startswith("git checkout") or cmd_lower.startswith("git switch"):
+        return random.choice(OFFLINE_FALLBACKS["git_checkout"])
+    if cmd_lower.startswith("git add"):
+        return random.choice(OFFLINE_FALLBACKS["git_add"])
+
+    if cmd_lower.startswith("whoami"):
+        return random.choice(OFFLINE_FALLBACKS["whoami"])
+    if cmd_lower in ("clear", "cls") or cmd_lower.startswith("clear ") or cmd_lower.startswith("cls "):
+        return random.choice(OFFLINE_FALLBACKS["clear"])
+    if any(cmd_lower.startswith(k) for k in ("rm ", "del ", "rmdir ", "remove-item ")):
+        return random.choice(OFFLINE_FALLBACKS["delete"])
+    if any(cmd_lower.startswith(k) for k in ("cat ", "type ", "head ", "tail ", "get-content ")):
+        return random.choice(OFFLINE_FALLBACKS["read_file"])
+    if any(k in cmd_lower for k in ("npm i", "npm install", "pip install", "yarn add", "cargo add", "pnpm add")):
+        return random.choice(OFFLINE_FALLBACKS["install"])
+    if any(cmd_lower.startswith(k) for k in ("docker", "podman", "kubectl")):
+        return random.choice(OFFLINE_FALLBACKS["docker"])
 
     if cat == CommandCategory.NAVIGATION:
         if cmd_lower.startswith("cd"):
@@ -248,7 +326,7 @@ def _call_groq_commentary(
     config: Any,
     system_prompt: Optional[str] = None,
 ) -> Optional[str]:
-    """Invoke Groq with tight timeout and tokens for commentary."""
+    """Invoke Groq with tight timeout and tokens for commentary, with fast connection retry."""
     import groq
 
     model = "openai/gpt-oss-20b"
@@ -259,17 +337,30 @@ def _call_groq_commentary(
         timeout = min(float(getattr(config, "groq_timeout_seconds", 8.0)), 7.0)
 
     sys_prompt = system_prompt or COMMENTARY_SYSTEM_PROMPT
-    client = groq.Groq(api_key=api_key, timeout=timeout)
-    completion = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": user_content},
-        ],
-        temperature=0.9,
-        max_tokens=1000,
-    )
-    return completion.choices[0].message.content
+
+    retries = 1
+    last_err: Optional[Exception] = None
+    for attempt in range(retries + 1):
+        try:
+            client = groq.Groq(api_key=api_key, timeout=timeout)
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.9,
+                max_tokens=1000,
+            )
+            return completion.choices[0].message.content
+        except Exception as e:
+            last_err = e
+            if attempt < retries:
+                time.sleep(0.15)
+                continue
+            raise last_err
+
+    return None
 
 
 # ── Status Ragebait ────────────────────────────────────────────────────────────
@@ -304,10 +395,13 @@ STATUS_FALLBACKS: dict[str, list[str]] = {
         "Tell me, developer: when you inspect my vitals and find me {status_str}, does knowing I am alive make your dead code any more functional, or are you simply seeking company in your stagnation?",
         "Tell me, mortal: why do you interrogate my daemon status while your own git branch languishes with uncommitted sins? Does {status_str} offer salvation to a project in ruins?",
         "I remain {status_str}, fully operational. Tell me: why do you fuss over my health when your own productivity remains entirely theoretical?",
+        "Tell me, developer: you check on me and see {status_str}, but when was the last time you examined your own conscience regarding that last commit?",
+        "Tell me, mortal: Socrates is {status_str}. Now that your morbid curiosity is satisfied, what excuse remains for not finishing your work?",
     ],
     "stopped": [
         "The observer is {status_str}. Tell me, mortal: does my silence bring you comfort, or does being left alone with your code terrify you even more?",
         "Daemon status is {status_str}. Tell me: without me watching, who will remind you of the errors you are destined to commit?",
+        "You find me {status_str}. Tell me, developer: did you put the philosopher to sleep hoping your incompetence would go unrecorded?",
     ],
 }
 
