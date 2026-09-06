@@ -85,9 +85,9 @@ class CommentaryGate:
 
         return True
 
-    def record_comment(self, session_id: str) -> None:
-        """Record that a comment was generated for this session."""
-        self._last_comment_ts[session_id] = time.time()
+    def record_comment(self, session_id: str, ts: Optional[float] = None) -> None:
+        """Update last commentary timestamp for a session."""
+        self._last_comment_ts[session_id] = time.time() if ts is None else ts
 
     def write_pending(
         self,
