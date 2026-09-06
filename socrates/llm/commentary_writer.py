@@ -136,12 +136,14 @@ OFFLINE_FALLBACKS: dict[str, list[str]] = {
 }
 
 
+from socrates.llm.command_classifier import classify_command, CommandCategory
+
+
 def _select_fallback(ctx: CommentaryContext) -> str:
     """Select a deterministic/semi-random offline fallback comment."""
-    cmd = ctx.command.strip()
-    cmd_lower = cmd.lower()
+    cat = classify_command(ctx.command, retry_count=ctx.retry_count)
 
-    if ctx.retry_count >= 2:
+    if cat == CommandCategory.DESPERATE_RETRY:
         tpl = random.choice(OFFLINE_FALLBACKS["retry"])
         return tpl.format(retry_count=ctx.retry_count)
 
@@ -149,6 +151,7 @@ def _select_fallback(ctx: CommentaryContext) -> str:
         tpl = random.choice(OFFLINE_FALLBACKS["failure"])
         return tpl.format(exit_code=ctx.exit_code)
 
+    cmd_lower = ctx.command.strip().lower()
     if cmd_lower.startswith("git status"):
         return random.choice(OFFLINE_FALLBACKS["git_status"])
     if cmd_lower.startswith("git diff"):
@@ -157,13 +160,16 @@ def _select_fallback(ctx: CommentaryContext) -> str:
         return random.choice(OFFLINE_FALLBACKS["git_push"])
     if cmd_lower.startswith("git commit"):
         return random.choice(OFFLINE_FALLBACKS["git_commit"])
-    if cmd_lower.startswith("ls") or cmd_lower.startswith("dir"):
+
+    if cat == CommandCategory.NAVIGATION:
+        if cmd_lower.startswith("cd"):
+            return random.choice(OFFLINE_FALLBACKS["cd"])
         return random.choice(OFFLINE_FALLBACKS["ls"])
-    if cmd_lower.startswith("cd"):
-        return random.choice(OFFLINE_FALLBACKS["cd"])
-    if any(b in cmd_lower for b in ("build", "make", "cargo", "npm run build")):
+
+    if cat == CommandCategory.BUILD:
         return random.choice(OFFLINE_FALLBACKS["build"])
-    if any(t in cmd_lower for t in ("test", "pytest", "npm test", "cargo test")):
+
+    if cat == CommandCategory.TEST:
         return random.choice(OFFLINE_FALLBACKS["test"])
 
     return random.choice(OFFLINE_FALLBACKS["generic"])
@@ -198,8 +204,10 @@ def generate_commentary(
 
 def _build_commentary_prompt(ctx: CommentaryContext) -> str:
     """Construct the contextual user prompt for the commentary LLM."""
+    cat = classify_command(ctx.command, retry_count=ctx.retry_count)
     lines = [
         f"COMMAND: {ctx.command}",
+        f"CATEGORY: {cat.value}",
         f"EXIT CODE: {ctx.exit_code}",
         f"DURATION: {ctx.duration_seconds:.2f}s",
         f"CWD: {ctx.cwd}",
