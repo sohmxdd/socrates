@@ -153,24 +153,67 @@ def _load_yaml(path: Path) -> dict:
     return data
 
 
-def load_config(user_config_path: Optional[Path] = None) -> SocratesConfig:
+LOCAL_CONFIG_NAMES = (".socrates.yaml", ".socrates.yml")
+
+
+def find_local_config(cwd: Optional[str | Path] = None) -> Optional[Path]:
+    """
+    Search cwd and its parent directories for a project-local .socrates.yaml or .socrates.yml.
+    Returns the Path to the first config file found, or None.
+    """
+    try:
+        start = Path(cwd).resolve() if cwd else Path.cwd().resolve()
+    except Exception:
+        return None
+
+    current = start
+    while True:
+        for name in LOCAL_CONFIG_NAMES:
+            candidate = current / name
+            if candidate.is_file():
+                return candidate
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    return None
+
+
+def load_config(
+    user_config_path: Optional[Path] = None,
+    local_config_path: Optional[Path] = None,
+    cwd: Optional[str | Path] = None,
+) -> SocratesConfig:
     """
     Load and merge configuration.
 
     Priority (highest wins):
-        1. User config: ~/.socrates/config.yaml
-        2. Shipped defaults: config/default_config.yaml
-        3. Dataclass defaults (hardcoded fallback)
+        1. Local project config: .socrates.yaml in cwd or ancestor
+        2. User config: ~/.socrates/config.yaml
+        3. Shipped defaults: config/default_config.yaml
+        4. Dataclass defaults (hardcoded fallback)
     """
     _load_env()
     defaults = _load_yaml(_default_config_path())
     user = _load_yaml(user_config_path or _user_config_path())
 
-    merged = {**defaults, **user}
+    local_file = local_config_path or find_local_config(cwd)
+    local = _load_yaml(local_file) if local_file else {}
+
+    merged = {**defaults, **user, **local}
 
     # Only pass keys that the dataclass knows about; silently ignore unknown keys.
     known_fields = {f.name for f in SocratesConfig.__dataclass_fields__.values()}  # type: ignore[attr-defined]
     filtered = {k: v for k, v in merged.items() if k in known_fields}
 
     return SocratesConfig(**filtered)
+
+
+def load_config_for_cwd(
+    cwd: Optional[str | Path] = None,
+    user_config_path: Optional[Path] = None,
+) -> SocratesConfig:
+    """Convenience alias to load configuration scoped to a specific working directory."""
+    return load_config(user_config_path=user_config_path, cwd=cwd)
+
 
