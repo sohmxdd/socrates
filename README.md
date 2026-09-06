@@ -17,9 +17,9 @@ Socrates is a background daemon that hooks into your shell. Every command you ru
 ## Requirements
 
 - Python 3.10+
-- macOS or Linux (Windows supported for dev/testing)
-- `zsh` or `bash` shell
-- A free [Groq API key](https://console.groq.com/) for the LLM tiebreaker (optional — system works without it, ambiguous cases are silently dropped)
+- macOS, Linux, or Windows
+- `zsh`, `bash`, or `powershell`
+- A free [Groq API key](https://console.groq.com/) for dynamic LLM interventions and ambient commentary (offline fallbacks included)
 
 ---
 
@@ -33,16 +33,20 @@ cd socrates
 # 2. Install package
 pip install -e .
 
-# 3. Set your Groq API key (optional — for the LLM tiebreaker on ambiguous cases)
-#    Add to your shell profile (~/.zshrc or ~/.bashrc):
+# 3. Set your Groq API key (optional — Socrates includes rich offline fallbacks)
+#    Add to your shell profile (~/.zshrc, ~/.bashrc, or $PROFILE):
 export GROQ_API_KEY="your_api_key_here"
 
-# 4. Source the shell hook in ~/.zshrc or ~/.bashrc
+# 4. Source the shell hook:
 # For Zsh:
 echo 'source /path/to/socrates/shell/socrates.zsh' >> ~/.zshrc
 
 # For Bash:
 echo 'source /path/to/socrates/shell/socrates.bash' >> ~/.bashrc
+
+# For PowerShell (Windows / macOS / Linux):
+# Add to your $PROFILE:
+. C:\path\to\socrates\shell\socrates.ps1
 
 # 5. Start the daemon
 socrates start
@@ -50,6 +54,38 @@ socrates start
 # 6. (Recommended) Auto-start at login
 socrates install-daemon
 ```
+
+---
+
+## Ambient Commentary Mode ("Ragebait Socrates")
+
+Beyond critical safety interventions, Socrates can optionally provide ambient philosophical commentary on your everyday terminal workflow. When enabled, Socrates observes your commands and delivers dry, surgical, sardonically observant commentary right at your prompt.
+
+### Quick Start in Any Project Directory
+
+Initialize Socrates in any directory to tailor its behavior for that repository:
+
+```bash
+# Initialize local .socrates.yaml with ambient commentary enabled (60% trigger chance)
+socrates init --commentary
+
+# Or specify a higher/lower commentary rate (e.g. 90% chance)
+socrates init --commentary --rate 0.9
+```
+
+### Commentary CLI Commands
+
+```bash
+socrates commentary on [--rate 0.8]   # Enable commentary (local or global)
+socrates commentary off               # Disable commentary
+socrates commentary status            # Show current scope, rate, and cooldown
+socrates commentary test "pytest"     # Preview Socrates' observation for a command
+```
+
+### Visual Distinction at the Prompt
+
+- **Amber (`Socrates observes:`):** Ambient commentary and dry philosophical observations on commands, directory changes, or repeated retries.
+- **Cyan (`Socrates:`):** Critical high-priority interventions (forgotten unpushed commits, detected secret leaks, silent process failures).
 
 ---
 
