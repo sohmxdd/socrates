@@ -10,8 +10,9 @@ $script:SocratesHome = if ($env:SOCRATES_HOME) { $env:SOCRATES_HOME } else { Joi
 $script:SocratesPendingDir = Join-Path $script:SocratesHome "pending"
 $script:SocratesSessionId = [System.Guid]::NewGuid().ToString()
 
-$script:SocratesLastCmd = ""
-$script:SocratesLastStart = ""
+# Initialize history ID tracker so sourcing this script is never processed as a target command
+$initH = Get-History -Count 1 -ErrorAction SilentlyContinue
+$script:SocratesLastHistoryId = if ($initH) { $initH.Id } else { -1 }
 
 # ── 1. Deliver Pending Interventions at Prompt ─────────────────────────────────
 
@@ -121,16 +122,15 @@ function Invoke-SocratesSendEvent {
 function Invoke-SocratesPostCmd {
     param([int]$ExitCode)
 
-    $cmd = $script:SocratesLastCmd
-    $startTs = $script:SocratesLastStart
-    $endTs = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    $cwd = (Get-Location).Path
+    $h = Get-History -Count 1 -ErrorAction SilentlyContinue
+    if (-not $h -or ($h.Id -eq $script:SocratesLastHistoryId)) {
+        Invoke-SocratesDeliverPending
+        return
+    }
 
-    # Reset immediately so it can NEVER fire twice on the same command
-    $script:SocratesLastCmd = ""
-    $script:SocratesLastStart = ""
+    $script:SocratesLastHistoryId = $h.Id
+    $cmd = $h.CommandLine
 
-    # If no command was executed, deliver any pending and exit immediately
     if ([string]::IsNullOrWhiteSpace($cmd)) {
         Invoke-SocratesDeliverPending
         return
@@ -142,13 +142,17 @@ function Invoke-SocratesPostCmd {
         return
     }
 
+    $startTs = $h.StartExecutionTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $endTs = $h.EndExecutionTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $cwd = (Get-Location).Path
+
     try {
         $payload = @{
             type = "postcmd"
             session_id = $script:SocratesSessionId
             command = $cmd
             cwd = $cwd
-            start_ts = if ($startTs) { $startTs } else { $endTs }
+            start_ts = $startTs
             end_ts = $endTs
             exit_code = $ExitCode
             capture_class = "SAFE"
@@ -170,21 +174,20 @@ function Invoke-SocratesPostCmd {
     Invoke-SocratesDeliverPending
 }
 
-# ── 3. PSReadLine History / Command Interception ───────────────────────────────
+# ── 3. PSReadLine History / Secret Interception ────────────────────────────────
 
-# Remove any previous Enter key handler so standard Enter behavior is 100% clean
-try {
-    Remove-PSReadLineKeyHandler -Chord Enter -ErrorAction SilentlyContinue
-} catch {}
+# Ensure Enter is ALWAYS bound to AcceptLine (never removed or broken)
+if ((Get-Module -Name PSReadLine -ErrorAction SilentlyContinue) -or (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) {
+    try {
+        Set-PSReadLineKeyHandler -Chord Enter -Function AcceptLine -ErrorAction SilentlyContinue
+    } catch {}
 
-# Use PSReadLine's built-in AddToHistoryHandler to capture command & detect secrets
-if ((Get-Module -Name PSReadLine -ErrorAction SilentlyContinue) -or (Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue)) {
     try {
         Set-PSReadLineOption -AddToHistoryHandler {
             param([string]$line)
             if ([string]::IsNullOrWhiteSpace($line)) { return $true }
 
-            # Quick local secret pattern detector for immediate feedback before execution
+            # Quick local secret pattern detector: immediate cyan warning before execution
             if ($line -match '(AKIA[0-9A-Z]{16}|ghp_[0-9a-zA-Z]{36}|sk_live_[0-9a-zA-Z]{24}|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)') {
                 Write-Host ""
                 Write-Host "Socrates: " -ForegroundColor Cyan -NoNewline
@@ -192,10 +195,6 @@ if ((Get-Module -Name PSReadLine -ErrorAction SilentlyContinue) -or (Get-Command
                 Write-Host "Tell me -- is a secret truly private once you have broadcast it into your console?"
                 Write-Host ""
             }
-
-            # Set command buffer for postcmd
-            $script:SocratesLastCmd = $line
-            $script:SocratesLastStart = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
             return $true
         }
