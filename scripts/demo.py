@@ -14,10 +14,11 @@ import os
 import sys
 import time
 
-from socrates.presentation.terminal import format_terminal_message, print_intervention
+from socrates.presentation.terminal import format_terminal_message, print_intervention, print_commentary
 from socrates.personality.messages import generate_message
-from socrates.rules.base import Confidence, RuleResult, RuleType
+from socrates.rules.base import Confidence, RuleResult, RuleType, CommentaryContext
 from socrates.rules.leaked_secrets import check_leaked_secrets
+from socrates.llm.commentary_writer import generate_commentary
 
 
 def run_demo() -> None:
@@ -63,6 +64,18 @@ def run_demo() -> None:
     print_intervention(msg_stuck)
     print()
 
+    # Scenario 5: Ambient Commentary ("Ragebait Socrates")
+    print("--- Scenario 5: Ambient Commentary (\"Ragebait Socrates\" in Amber) ---")
+    print("Developer runs mundane command 'git status' in project:")
+    ctx_status = CommentaryContext("demo", "git status", 0, 0.2, "/project")
+    print_commentary(generate_commentary(ctx_status))
+    print()
+
+    print("Developer repeats failing 'pytest' 3 times in desperation:")
+    ctx_retry = CommentaryContext("demo", "pytest", 1, 1.2, "/project", retry_count=3)
+    print_commentary(generate_commentary(ctx_retry))
+    print()
+
     # Comparison: Quiet Mode
     print("--- Quiet Mode Comparison ---")
     print("When quiet_mode: true is configured:")
@@ -89,12 +102,14 @@ def run_interactive() -> None:
         print("    [4] Stuck Process        (Task running 10x past historical baseline)")
         print("    [5] Socratic vs Quiet    (Philosophical ragebait vs plain factual)")
         print("    [6] Custom Command Test  (Type any command to check for secrets)")
+        print("    [7] Ambient Commentary   (Live Groq ragebait / philosophical observation)")
+        print("    [8] Desperate Retry Loop (Repeated failing commands mocked by Socrates)")
         print("    [A] Run All Scenarios")
         print("    [Q] Quit")
         print("=" * 62)
 
         try:
-            choice = input("Enter choice (1-6, A, Q): ").strip().upper()
+            choice = input("Enter choice (1-8, A, Q): ").strip().upper()
         except (KeyboardInterrupt, EOFError):
             print("\nExiting.")
             break
@@ -148,10 +163,24 @@ def run_interactive() -> None:
                     print_intervention(msg)
                 else:
                     print("Socrates: ... (Silent. No issues detected in this command.)")
+        elif choice == "7":
+            user_cmd = input("\nEnter command to observe [default: git diff]: ").strip() or "git diff"
+            print(f"\nEvaluating: '{user_cmd}'...")
+            time.sleep(0.3)
+            ctx = CommentaryContext("interactive", user_cmd, 0, 0.4, os.getcwd())
+            print_commentary(generate_commentary(ctx))
+        elif choice == "8":
+            user_cmd = input("\nEnter failing command to repeat [default: pytest]: ").strip() or "pytest"
+            retries_str = input("How many consecutive retries? [default: 3]: ").strip() or "3"
+            retries = int(retries_str) if retries_str.isdigit() else 3
+            print(f"\nSimulating: '{user_cmd}' repeated {retries} times in frustration...")
+            time.sleep(0.3)
+            ctx = CommentaryContext("interactive", user_cmd, 1, 1.2, os.getcwd(), retry_count=retries)
+            print_commentary(generate_commentary(ctx))
         elif choice == "A":
             run_demo()
         else:
-            print("Invalid option. Please choose 1-6, A, or Q.")
+            print("Invalid option. Please choose 1-8, A, or Q.")
 
 
 if __name__ == "__main__":
