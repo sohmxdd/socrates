@@ -54,6 +54,8 @@ class SocratesDaemon:
         self._server: asyncio.Server | None = None
         self._sweep_task: asyncio.Task | None = None
         self._shutdown_event = asyncio.Event()
+        from socrates.gate.commentary_gate import CommentaryGate
+        self.commentary_gate = CommentaryGate(self.config, self.home)
 
     # ── Startup / shutdown ─────────────────────────────────────────────────────
 
@@ -311,6 +313,91 @@ class SocratesDaemon:
             end_ts=end_ts,
             capture_class=capture_class,
         )
+
+        # Ambient commentary reaction
+        self._run_commentary(
+            session_id=session_id,
+            command=command,
+            command_sig=command_sig,
+            cwd=cwd,
+            repo_path=repo_path,
+            exit_code=exit_code,
+            stderr_tail=stderr_tail,
+            start_ts=start_ts,
+            end_ts=end_ts,
+        )
+
+    # ── Commentary engine ──────────────────────────────────────────────────────
+
+    def _run_commentary(
+        self,
+        *,
+        session_id: str,
+        command: str,
+        command_sig: str,
+        cwd: str,
+        repo_path: str | None,
+        exit_code: int,
+        stderr_tail: str | None,
+        start_ts: str,
+        end_ts: str,
+    ) -> None:
+        """
+        Evaluate and dispatch ambient commentary for this completed command.
+        """
+        try:
+            from socrates.config import load_config_for_cwd
+            from socrates.rules.base import CommentaryContext
+            from socrates.llm.commentary_writer import generate_commentary
+
+            effective_config = load_config_for_cwd(cwd)
+            if not self.commentary_gate.should_comment(session_id, command, effective_config):
+                return
+
+            duration = 0.0
+            try:
+                from datetime import datetime
+                s = datetime.fromisoformat(start_ts)
+                e = datetime.fromisoformat(end_ts)
+                duration = max(0.0, (e - s).total_seconds())
+            except Exception:
+                pass
+
+            from socrates.daemon import db
+            limit = getattr(effective_config, "commentary_context_window", 5)
+            recent_rows = db.get_recent_commands(self.db_path, session_id, limit=limit)
+            recent_cmds = [r["command"] for r in recent_rows if r["command"] != command]
+
+            retry_count = 0
+            for r in reversed(recent_rows):
+                if r["command_sig"] == command_sig and r["exit_code"] != 0:
+                    retry_count += 1
+                else:
+                    break
+
+            ctx = CommentaryContext(
+                session_id=session_id,
+                command=command,
+                exit_code=exit_code,
+                duration_seconds=duration,
+                cwd=cwd,
+                repo_path=repo_path,
+                stderr_tail=stderr_tail,
+                recent_commands=tuple(recent_cmds),
+                retry_count=retry_count,
+            )
+
+            comment = generate_commentary(ctx, config=effective_config)
+            if comment and comment.strip():
+                self.commentary_gate.write_pending(
+                    comment,
+                    session_id=session_id,
+                    repo_path=repo_path,
+                    effective_config=effective_config,
+                )
+                self.commentary_gate.record_comment(session_id)
+        except Exception:
+            logger.debug("Error in commentary processing", exc_info=True)
 
     # ── Rule evaluation ────────────────────────────────────────────────────────
 
