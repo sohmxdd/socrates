@@ -262,6 +262,6 @@ def _call_groq_commentary(api_key: str, user_content: str, config: Any) -> Optio
             {"role": "user", "content": user_content},
         ],
         temperature=0.9,
-        max_tokens=500,
+        max_tokens=1000,
     )
     return completion.choices[0].message.content
