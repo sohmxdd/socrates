@@ -128,6 +128,11 @@ OFFLINE_FALLBACKS: dict[str, list[str]] = {
         "Exit code {exit_code}. A decisive conclusion, if not the desired one.",
         "Failure recorded. At least the terminal was honest with you.",
     ],
+    "arrival": [
+        "Arriving in a new workspace. The illusion of a fresh start before the familiar errors take root.",
+        "You have changed directories. The problems, however, appear to have accompanied you.",
+        "Entering this project directory. Socrates shall observe what unfolds here.",
+    ],
     "generic": [
         "Fascinating command. One wonders what result was genuinely expected.",
         "Another line entered into the shell history. The chronicle grows heavier.",
@@ -141,6 +146,9 @@ from socrates.llm.command_classifier import classify_command, CommandCategory
 
 def _select_fallback(ctx: CommentaryContext) -> str:
     """Select a deterministic/semi-random offline fallback comment."""
+    if ctx.is_arrival:
+        return random.choice(OFFLINE_FALLBACKS["arrival"])
+
     cat = classify_command(ctx.command, retry_count=ctx.retry_count)
 
     if cat == CommandCategory.DESPERATE_RETRY:
@@ -214,8 +222,14 @@ def _build_commentary_prompt(ctx: CommentaryContext) -> str:
     ]
     if ctx.repo_path:
         lines.append(f"GIT REPO: {ctx.repo_path}")
+    if ctx.prev_cwd and ctx.prev_cwd != ctx.cwd:
+        lines.append(f"PREVIOUS CWD: {ctx.prev_cwd}")
+    if ctx.is_arrival:
+        lines.append("CONTEXT: User just arrived in a new workspace directory.")
     if ctx.retry_count > 0:
-        lines.append(f"RETRY COUNT: {ctx.retry_count} (user repeated this command)")
+        lines.append(f"RETRY COUNT: {ctx.retry_count} (user repeated this failing command)")
+        if ctx.retry_count >= 2:
+            lines.append("CRITICAL: User is caught in a desperate retry loop. Mock the magical thinking of repeating identical commands.")
     if ctx.stderr_tail:
         lines.append(f"STDERR TAIL: {ctx.stderr_tail[:200]}")
     if ctx.recent_commands:
