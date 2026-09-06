@@ -55,6 +55,7 @@ include = ["socrates*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
+addopts = "--basetemp=.pytest_temp"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
