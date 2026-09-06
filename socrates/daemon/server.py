@@ -465,10 +465,14 @@ class SocratesDaemon:
                 stderr_tail=stderr_tail,
             )
 
+            # Leaked secrets check (defense-in-depth in case preexec was bypassed)
+            self._run_leaked_secrets_check(command, session_id, repo_path, start_ts)
+
             # Silent failure rule.
             sf_result = check_silent_failure(event_data)
             if sf_result.confidence != Confidence.NONE:
                 self._route_result(sf_result, repo_path=repo_path, session_id=session_id)
+
 
             # Stuck-process rule (postcmd retrospective path — catches edge cases
             # where the process exits before the sweep fires).
