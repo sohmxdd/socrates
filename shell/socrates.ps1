@@ -97,7 +97,7 @@ function Invoke-SocratesSendEvent {
         if (Test-Path $portFile) {
             $port = [int](Get-Content $portFile -Raw).Trim()
             $tcp = New-Object System.Net.Sockets.TcpClient
-            $tcp.SendTimeout = 500
+            $tcp.SendTimeout = 400
             $tcp.Connect([System.Net.IPAddress]::Loopback, $port)
             if ($tcp.Connected) {
                 $stream = $tcp.GetStream()
@@ -116,84 +116,50 @@ function Invoke-SocratesSendEvent {
     } catch {}
 }
 
-# ── 2. Preexec: Check Secrets & Notify Daemon ──────────────────────────────────
+# ── 2. Postcmd: Complete Event & Check Pending ─────────────────────────────────
 
-function Invoke-SocratesPreExec {
-    param([string]$Cmd)
-    if ([string]::IsNullOrWhiteSpace($Cmd)) { return }
+function Invoke-SocratesPostCmd {
+    param([int]$ExitCode)
 
-    $script:SocratesLastCmd = $Cmd
-    $script:SocratesLastStart = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $cmd = $script:SocratesLastCmd
+    $startTs = $script:SocratesLastStart
+    $endTs = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     $cwd = (Get-Location).Path
 
-    # Quick local secret pattern detector for immediate feedback before execution
-    if ($Cmd -match '(AKIA[0-9A-Z]{16}|ghp_[0-9a-zA-Z]{36}|sk_live_[0-9a-zA-Z]{24}|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)') {
-        Write-Host ""
-        Write-Host "Socrates: " -ForegroundColor Cyan -NoNewline
-        Write-Host "An API key or secret token sits plainly in that command line, ready to be preserved in shell history."
-        Write-Host "Tell me -- is a secret truly private once you have broadcast it into your console?"
-        Write-Host ""
+    # Reset immediately so it can NEVER fire twice on the same command
+    $script:SocratesLastCmd = ""
+    $script:SocratesLastStart = ""
+
+    # If no command was executed, deliver any pending and exit immediately
+    if ([string]::IsNullOrWhiteSpace($cmd)) {
+        Invoke-SocratesDeliverPending
+        return
     }
 
-    # Dispatch preexec JSON event to daemon
+    # Don't comment on sourcing socrates.ps1, clear, or cls
+    if ($cmd -match 'socrates\.ps1' -or $cmd -eq 'clear' -or $cmd -eq 'cls') {
+        Invoke-SocratesDeliverPending
+        return
+    }
+
     try {
         $payload = @{
-            type = "preexec"
+            type = "postcmd"
             session_id = $script:SocratesSessionId
-            command = $Cmd
+            command = $cmd
             cwd = $cwd
-            start_ts = $script:SocratesLastStart
+            start_ts = if ($startTs) { $startTs } else { $endTs }
+            end_ts = $endTs
+            exit_code = $ExitCode
             capture_class = "SAFE"
         } | ConvertTo-Json -Compress
 
         Invoke-SocratesSendEvent -Json $payload
     } catch {}
-}
 
-# ── 3. Postcmd: Complete Event & Check Pending ─────────────────────────────────
-
-function Invoke-SocratesPostCmd {
-    param([int]$ExitCode)
-
-    # Fallback to history if PSReadLine Enter handler was bypassed
-    if (-not $script:SocratesLastCmd) {
-        try {
-            $h = Get-History -Count 1 -ErrorAction SilentlyContinue
-            if ($h -and $h.CommandLine) {
-                $script:SocratesLastCmd = $h.CommandLine
-                $script:SocratesLastStart = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            }
-        } catch {}
-    }
-
-    if ($script:SocratesLastCmd) {
-        $cmd = $script:SocratesLastCmd
-        $startTs = if ($script:SocratesLastStart) { $script:SocratesLastStart } else { (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
-        $endTs = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-        $cwd = (Get-Location).Path
-
-        $script:SocratesLastCmd = ""
-        $script:SocratesLastStart = ""
-
-        try {
-            $payload = @{
-                type = "postcmd"
-                session_id = $script:SocratesSessionId
-                command = $cmd
-                cwd = $cwd
-                start_ts = $startTs
-                end_ts = $endTs
-                exit_code = $ExitCode
-                capture_class = "SAFE"
-            } | ConvertTo-Json -Compress
-
-            Invoke-SocratesSendEvent -Json $payload
-        } catch {}
-    }
-
-    # Brief check for incoming pending commentary (up to 300ms)
+    # Brief check for incoming pending commentary (up to 250ms)
     if (Test-Path $script:SocratesPendingDir) {
-        $deadline = (Get-Date).AddMilliseconds(300)
+        $deadline = (Get-Date).AddMilliseconds(250)
         while ((Get-Date) -lt $deadline) {
             $pending = Get-ChildItem -Path $script:SocratesPendingDir -Filter "*.json" -ErrorAction SilentlyContinue
             if ($pending) { break }
@@ -204,13 +170,47 @@ function Invoke-SocratesPostCmd {
     Invoke-SocratesDeliverPending
 }
 
-# ── 4. Hook Prompt and PSReadLine ──────────────────────────────────────────────
+# ── 3. PSReadLine History / Command Interception ───────────────────────────────
 
-# Wrap prompt function
-if (Test-Path Function:\prompt) {
-    $script:OriginalPrompt = $Function:prompt
-} else {
-    $script:OriginalPrompt = { "PS $($executionContext.SessionState.Path.CurrentLocation)$('>' * ($nestedPromptLevel + 1)) " }
+# Remove any previous Enter key handler so standard Enter behavior is 100% clean
+try {
+    Remove-PSReadLineKeyHandler -Chord Enter -ErrorAction SilentlyContinue
+} catch {}
+
+# Use PSReadLine's built-in AddToHistoryHandler to capture command & detect secrets
+if ((Get-Module -Name PSReadLine -ErrorAction SilentlyContinue) -or (Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue)) {
+    try {
+        Set-PSReadLineOption -AddToHistoryHandler {
+            param([string]$line)
+            if ([string]::IsNullOrWhiteSpace($line)) { return $true }
+
+            # Quick local secret pattern detector for immediate feedback before execution
+            if ($line -match '(AKIA[0-9A-Z]{16}|ghp_[0-9a-zA-Z]{36}|sk_live_[0-9a-zA-Z]{24}|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)') {
+                Write-Host ""
+                Write-Host "Socrates: " -ForegroundColor Cyan -NoNewline
+                Write-Host "An API key or secret token sits plainly in that command line, ready to be preserved in shell history."
+                Write-Host "Tell me -- is a secret truly private once you have broadcast it into your console?"
+                Write-Host ""
+            }
+
+            # Set command buffer for postcmd
+            $script:SocratesLastCmd = $line
+            $script:SocratesLastStart = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+            return $true
+        }
+    } catch {}
+}
+
+# ── 4. Hook Prompt ─────────────────────────────────────────────────────────────
+
+# Wrap prompt function safely without recursive re-wrapping
+if (-not $script:OriginalPrompt) {
+    if (Test-Path Function:\prompt) {
+        $script:OriginalPrompt = $Function:prompt
+    } else {
+        $script:OriginalPrompt = { "PS $($executionContext.SessionState.Path.CurrentLocation)$('>' * ($nestedPromptLevel + 1)) " }
+    }
 }
 
 function global:prompt {
@@ -220,22 +220,7 @@ function global:prompt {
     & $script:OriginalPrompt
 }
 
-# Hook Enter key if PSReadLine is available (wrapped with parentheses to avoid parameter error)
-if ((Get-Module -Name PSReadLine -ErrorAction SilentlyContinue) -or (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) {
-    try {
-        Set-PSReadLineKeyHandler -Chord Enter -ScriptBlock {
-            $line = ""
-            [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$null)
-            if ($line) {
-                Invoke-SocratesPreExec -Cmd $line
-            }
-            [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
-        }
-    } catch {}
-}
-
 Write-Host "Socrates observer attached to PowerShell." -ForegroundColor Cyan
 Write-Host "Type " -NoNewline
 Write-Host "socrates status" -ForegroundColor Yellow -NoNewline
 Write-Host " to verify daemon connectivity."
-
