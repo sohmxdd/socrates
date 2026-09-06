@@ -208,49 +208,79 @@ precmd_functions+=(_socrates_precmd)
 
 # ── Pending message delivery ───────────────────────────────────────────────────
 
+# ── Local config discovery & delivery ──────────────────────────────────────────
+
+_socrates_find_local_config_zsh() {
+    local dir="$PWD"
+    while [[ "$dir" != "/" && -n "$dir" ]]; do
+        if [[ -f "$dir/.socrates.yaml" ]]; then
+            export SOCRATES_LOCAL_CONFIG="$dir/.socrates.yaml"
+            return 0
+        elif [[ -f "$dir/.socrates.yml" ]]; then
+            export SOCRATES_LOCAL_CONFIG="$dir/.socrates.yml"
+            return 0
+        fi
+        dir="${dir:h}"
+    done
+    unset SOCRATES_LOCAL_CONFIG 2>/dev/null || true
+}
+
 _socrates_deliver_pending() {
+    _socrates_find_local_config_zsh
     [[ -d "$_SOCRATES_PENDING_DIR" ]] || return 0
 
-    # Find the git repo root for the current directory.
     local repo_root=""
     local dir="$(pwd)"
-    while [[ "$dir" != "/" ]]; do
+    while [[ "$dir" != "/" && -n "$dir" ]]; do
         if [[ -d "$dir/.git" ]]; then
             repo_root="$dir"
             break
         fi
         dir="${dir:h}"
     done
-    [[ -z "$repo_root" ]] && return 0
 
-    # Compute the repo path hash (must match what the daemon uses).
-    local repo_hash
-    repo_hash="$(python3 -c "
-import hashlib,sys
-print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])
-" -- "$repo_root" 2>/dev/null)"
-    [[ -z "$repo_hash" ]] && return 0
+    local repo_hash=""
+    if [[ -n "$repo_root" ]]; then
+        repo_hash="$(python3 -c "import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])" -- "$repo_root" 2>/dev/null)"
+    fi
 
-    local pending_file="${_SOCRATES_PENDING_DIR}/${repo_hash}.json"
-    [[ -f "$pending_file" ]] || return 0
+    local output
+    output="$(python3 -c "
+import os, sys, glob, json
+pending_dir = sys.argv[1]
+repo_hash = sys.argv[2] if len(sys.argv) > 2 else ''
 
-    # Read and atomically remove the file, then print the message.
-    local message
-    message="$(python3 -c "
-import json,sys,os
-path = sys.argv[1]
-try:
-    with open(path, 'r') as f:
-        data = json.load(f)
-    os.unlink(path)
-    print(data.get('formatted_message', ''))
-except Exception:
-    pass
-" -- "$pending_file" 2>/dev/null)"
+files = []
+if repo_hash:
+    rf = os.path.join(pending_dir, f'{repo_hash}.json')
+    if os.path.isfile(rf): files.append(rf)
 
-    if [[ -n "$message" ]]; then
-        # Print above the next prompt line.
+for f in sorted(glob.glob(os.path.join(pending_dir, '*.json'))):
+    if f not in files: files.append(f)
+
+for path in files:
+    if not os.path.isfile(path): continue
+    try:
+        with open(path, 'r', encoding='utf-8') as fh:
+            data = json.load(fh)
+        os.unlink(path)
+        is_commentary = data.get('is_commentary', False) or data.get('rule_type') == 'commentary'
+        msg = data.get('formatted_message', '').strip()
+        if msg:
+            if is_commentary:
+                print(f'\\033[1;93mSocrates observes:\\033[0m {msg}')
+            else:
+                if not msg.startswith('Socrates:'):
+                    print(f'\\033[1;96mSocrates:\\033[0m {msg}')
+                else:
+                    print(msg)
+    except Exception:
+        pass
+" "$_SOCRATES_PENDING_DIR" "$repo_hash" 2>/dev/null)"
+
+    if [[ -n "$output" ]]; then
         print ""
-        print "$message"
+        print -P "$output"
+        print ""
     fi
 }

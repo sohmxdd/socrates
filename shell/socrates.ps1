@@ -53,13 +53,39 @@ function Invoke-SocratesDeliverPending {
                 $content = $raw | ConvertFrom-Json
                 if ($content -and $content.formatted_message) {
                     Write-Host ""
-                    Write-Host "Socrates: " -ForegroundColor Cyan -NoNewline
+                    if ($content.is_commentary -or $content.rule_type -eq "commentary") {
+                        Write-Host "Socrates observes: " -ForegroundColor DarkYellow -NoNewline
+                    } else {
+                        Write-Host "Socrates: " -ForegroundColor Cyan -NoNewline
+                    }
                     Write-Host $content.formatted_message
                     Write-Host ""
                 }
             } catch {}
         }
     }
+}
+
+function Invoke-SocratesFindLocalConfig {
+    try {
+        $dir = (Get-Location).Path
+        while ($dir) {
+            $c1 = Join-Path $dir ".socrates.yaml"
+            $c2 = Join-Path $dir ".socrates.yml"
+            if (Test-Path $c1) {
+                $env:SOCRATES_LOCAL_CONFIG = $c1
+                return
+            }
+            if (Test-Path $c2) {
+                $env:SOCRATES_LOCAL_CONFIG = $c2
+                return
+            }
+            $parent = Split-Path $dir -Parent
+            if ($parent -eq $dir) { break }
+            $dir = $parent
+        }
+        Remove-Item env:SOCRATES_LOCAL_CONFIG -ErrorAction SilentlyContinue
+    } catch {}
 }
 
 # ── 2. Preexec: Check Secrets & Notify Daemon ──────────────────────────────────
@@ -147,6 +173,7 @@ if (Test-Path Function:\prompt) {
 function global:prompt {
     $lastExit = $global:LASTEXITCODE
     Invoke-SocratesPostCmd -ExitCode $lastExit
+    Invoke-SocratesFindLocalConfig
     & $script:OriginalPrompt
 }
 
