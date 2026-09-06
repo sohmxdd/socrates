@@ -56,6 +56,7 @@ class SocratesDaemon:
         self._shutdown_event = asyncio.Event()
         from socrates.gate.commentary_gate import CommentaryGate
         self.commentary_gate = CommentaryGate(self.config, self.home)
+        self._session_cwds: dict[str, str] = {}
 
     # ── Startup / shutdown ─────────────────────────────────────────────────────
 
@@ -375,6 +376,10 @@ class SocratesDaemon:
                 else:
                     break
 
+            prev_cwd = self._session_cwds.get(session_id)
+            is_arrival = bool(prev_cwd and prev_cwd != cwd)
+            self._session_cwds[session_id] = cwd
+
             ctx = CommentaryContext(
                 session_id=session_id,
                 command=command,
@@ -385,6 +390,8 @@ class SocratesDaemon:
                 stderr_tail=stderr_tail,
                 recent_commands=tuple(recent_cmds),
                 retry_count=retry_count,
+                prev_cwd=prev_cwd,
+                is_arrival=is_arrival,
             )
 
             comment = generate_commentary(ctx, config=effective_config)

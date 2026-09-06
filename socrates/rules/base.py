@@ -113,4 +113,7 @@ class CommentaryContext:
     stderr_tail:      Optional[str] = None
     recent_commands:  tuple[str, ...] = field(default_factory=tuple)
     retry_count:      int = 0
+    prev_cwd:         Optional[str] = None
+    is_arrival:       bool = False
+
 
