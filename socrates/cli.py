@@ -428,6 +428,79 @@ def demo(interactive: bool) -> None:
             mod.run_demo()
 
 
+# ── init ───────────────────────────────────────────────────────────────────────
+
+@main.command()
+@click.option("--commentary", is_flag=True, default=False, help="Enable ambient commentary in this project.")
+@click.option("--commentary-rate", type=float, default=None, help="Commentary trigger rate (0.0 to 1.0).")
+@click.option("--force", "-f", is_flag=True, help="Overwrite existing .socrates.yaml if present.")
+def init(commentary: bool, commentary_rate: Optional[float], force: bool) -> None:
+    """Initialize a project-local .socrates.yaml configuration."""
+    target = Path.cwd() / ".socrates.yaml"
+    if target.exists() and not force:
+        click.echo(f"Configuration file already exists at {target}. Use --force to overwrite.")
+        return
+
+    rate = commentary_rate if commentary_rate is not None else (0.8 if commentary else 0.6)
+
+    content = f"""# Socrates Project Configuration
+# Created by `socrates init`
+
+# Ambient commentary mode
+commentary_enabled: {str(commentary).lower()}
+commentary_rate: {rate}
+commentary_cooldown_seconds: 15
+
+# Commands to skip commentary for
+commentary_skip_commands:
+  - "clear"
+  - "cls"
+  - "pwd"
+  - "exit"
+"""
+    target.write_text(content, encoding="utf-8")
+    click.echo(f"Created project configuration: {target}")
+    if commentary:
+        click.echo("Ambient commentary enabled at rate: " + str(rate))
+    else:
+        click.echo("Commentary is disabled. Run `socrates commentary on` or edit .socrates.yaml to enable.")
+
+
+# ── config ─────────────────────────────────────────────────────────────────────
+
+@main.group()
+def config() -> None:
+    """Inspect and manage Socrates configuration."""
+    pass
+
+
+@config.command(name="show")
+@click.option("--cwd", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=None, help="Working directory to evaluate config for.")
+def config_show(cwd: Optional[str]) -> None:
+    """Show effective configuration for the current or specified directory."""
+    from socrates.config import find_local_config, load_config_for_cwd, _user_config_path
+
+    target_cwd = Path(cwd).resolve() if cwd else Path.cwd().resolve()
+    local_cfg = find_local_config(target_cwd)
+    user_cfg = _user_config_path()
+
+    click.echo(f"Working Directory: {target_cwd}")
+    click.echo(f"Local Config:      {local_cfg if local_cfg else '(none)'}")
+    click.echo(f"User Config:       {user_cfg if user_cfg.exists() else '(none)'}")
+    click.echo("-" * 50)
+
+    cfg = load_config_for_cwd(target_cwd)
+    click.echo(f"commentary_enabled:          {cfg.commentary_enabled}")
+    click.echo(f"commentary_rate:             {cfg.commentary_rate}")
+    click.echo(f"commentary_cooldown_seconds: {cfg.commentary_cooldown_seconds}")
+    click.echo(f"commentary_skip_commands:    {cfg.commentary_skip_commands}")
+    click.echo(f"groq_enabled:                {cfg.groq_enabled}")
+    click.echo(f"groq_model:                  {cfg.groq_model}")
+    click.echo(f"color_enabled:               {cfg.color_enabled}")
+    click.echo(f"quiet_mode:                  {cfg.quiet_mode}")
+
+
 if __name__ == "__main__":
     main()
+
 
