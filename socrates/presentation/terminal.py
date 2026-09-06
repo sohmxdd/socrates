@@ -17,6 +17,7 @@ from typing import Optional, TextIO
 
 # ANSI codes
 CYAN_BOLD = "\033[1;96m"
+AMBER_BOLD = "\033[1;93m"
 RESET = "\033[0m"
 
 
@@ -55,6 +56,26 @@ def format_terminal_message(message: str, color_enabled: bool = True) -> str:
     return f"{prefix_text} {body}"
 
 
+def format_commentary_message(message: str, color_enabled: bool = True) -> str:
+    """
+    Format an ambient commentary message with the 'Socrates observes:' prefix in amber.
+    """
+    message = message.strip()
+    prefix_text = "Socrates observes:"
+
+    if message.startswith("Socrates observes:"):
+        body = message[len("Socrates observes:"):].lstrip()
+    elif message.startswith("Socrates:"):
+        body = message[len("Socrates:"):].lstrip()
+    else:
+        body = message
+
+    use_color = should_use_color(color_enabled)
+    if use_color:
+        return f"{AMBER_BOLD}{prefix_text}{RESET} {body}"
+    return f"{prefix_text} {body}"
+
+
 def print_intervention(
     message: str,
     color_enabled: bool = True,
@@ -73,3 +94,23 @@ def print_intervention(
         encoding = getattr(stream, "encoding", None) or "utf-8"
         safe_text = formatted.encode(encoding, errors="replace").decode(encoding)
         print(safe_text, file=stream)
+
+
+def print_commentary(
+    message: str,
+    color_enabled: bool = True,
+    file: Optional[TextIO] = None,
+) -> None:
+    """
+    Print an ambient commentary message to the terminal.
+    """
+    stream = file or sys.stdout
+    use_color = should_use_color(color_enabled, stream=stream)
+    formatted = format_commentary_message(message, color_enabled=use_color)
+    try:
+        print(formatted, file=stream)
+    except UnicodeEncodeError:
+        encoding = getattr(stream, "encoding", None) or "utf-8"
+        safe_text = formatted.encode(encoding, errors="replace").decode(encoding)
+        print(safe_text, file=stream)
+
