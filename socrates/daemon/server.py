@@ -136,6 +136,19 @@ class SocratesDaemon:
         port_path = self.home / "daemon.port"
         port_path.unlink(missing_ok=True)
 
+    def get_health_status(self) -> dict[str, Any]:
+        """Return diagnostic health status of the daemon and database."""
+        db_exists = self.db_path.exists()
+        db_size_bytes = self.db_path.stat().st_size if db_exists else 0
+        return {
+            "status": "healthy" if self._server is not None else "initializing",
+            "pid": os.getpid(),
+            "db_exists": db_exists,
+            "db_size_bytes": db_size_bytes,
+            "home": str(self.home),
+            "platform": sys.platform,
+        }
+
     # ── Connection handler ─────────────────────────────────────────────────────
 
     async def _handle_connection(
