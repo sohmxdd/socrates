@@ -258,3 +258,11 @@ class TestWritePendingAndEscalation:
                 mock_notify.assert_called_once()
                 # Stale pending file should have been deleted
                 assert not pfile.exists()
+
+    def test_get_suppression_summary(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="socrates_gate_") as tmp:
+            gate, db_path, _ = create_gate(Path(tmp))
+            summary = gate.get_suppression_summary()
+            assert "total_rules" in summary
+            assert summary["db_path"] == str(db_path)
+            assert summary["dismiss_threshold"] == 3
