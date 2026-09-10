@@ -221,6 +221,17 @@ class InterventionGate:
         from socrates.daemon import db
         return db.increment_dismiss(self.db_path, fingerprint)
 
+    def get_suppression_summary(self) -> dict[str, Any]:
+        """Return diagnostic metrics of active suppression rules and snoozes."""
+        from socrates.daemon import db
+        rows = db.get_all_suppressions(self.db_path) if hasattr(db, "get_all_suppressions") else []
+        return {
+            "total_rules": len(rows),
+            "db_path": str(self.db_path),
+            "dismiss_threshold": getattr(self.config, "dismiss_threshold", 3),
+            "cooldown_seconds": getattr(self.config, "intervention_cooldown_seconds", 3600),
+        }
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
