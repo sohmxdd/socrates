@@ -15,10 +15,21 @@ from socrates.presentation.terminal import (
     format_terminal_message,
     print_intervention,
     should_use_color,
+    render_badge,
+    render_banner,
 )
 
 
 class TestTerminalStyling:
+    def test_render_badge(self) -> None:
+        badge = render_badge("STATUS", "RUNNING", color_enabled=False)
+        assert badge == "[STATUS] RUNNING"
+        colored = render_badge("STATUS", "RUNNING", color_enabled=True)
+        assert "[STATUS]" in colored
+
+    def test_render_banner(self) -> None:
+        banner = render_banner(color_enabled=False)
+        assert "Socrates" in banner or "___" in banner
     def test_should_use_color_default(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             assert should_use_color(color_enabled=True) is True
