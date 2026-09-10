@@ -5,6 +5,8 @@
 secrets.yaml
 secrets.yml
 *_secrets.*
+!socrates/rules/*_secrets.py
+!tests/test_rules/*_secrets.py
 
 # === Socrates runtime state (never commit these) ===
 .socrates/
