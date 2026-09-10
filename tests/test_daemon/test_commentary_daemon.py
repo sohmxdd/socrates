@@ -56,6 +56,9 @@ def test_daemon_postcmd_generates_commentary(tmp_path: Path):
 
 
 def test_daemon_postcmd_respects_skip_commands(tmp_path: Path):
+    cfg_file = tmp_path / ".socrates.yaml"
+    cfg_file.write_text("commentary_enabled: true\ncommentary_rate: 1.0\ncommentary_cooldown_seconds: 0\ncommentary_skip_commands:\n  - clear\n", encoding="utf-8")
+
     cfg = SocratesConfig(
         commentary_enabled=True,
         commentary_rate=1.0,
