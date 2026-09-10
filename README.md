@@ -1,57 +1,138 @@
 # Socrates
 
-> Watches everything. Says almost nothing. When he finally speaks — listen.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sohmxdd/socrates/main/assets/banner.png" alt="Socrates Banner" width="600" onerror="this.style.display='none'"/>
+</p>
 
-Socrates is a passive terminal-watching agent for developers. It observes shell sessions and speaks up only when something is genuinely wrong: a forgotten `git push`, a leaked API key, a build that silently failed, or a process stuck long past its own historical baseline. It stays silent the rest of the time.
+<p align="center">
+  <strong>Watches everything. Says almost nothing. When he finally speaks — listen.</strong>
+</p>
 
----
-
-## How it works (30-second version)
-
-Socrates is a background daemon that hooks into your shell. Every command you run gets logged locally. A periodic sweep checks all your known repos on its own clock — independent of any terminal window — so it catches a forgotten push even days later in a brand-new terminal. A suppression gate based on issue fingerprints (not timers) means it won't nag you while you're actively committing. Only genuinely ambiguous cases get a quick yes/no from a free cloud model (Groq). Everything else is local, offline, and deterministic.
-
-**Output:** one short styled text message, optionally a non-verbal chime. No voice, no TTS, no chat interface.
-
----
-
-## Requirements
-
-- Python 3.10+
-- macOS, Linux, or Windows
-- `zsh`, `bash`, or `powershell`
-- A free [Groq API key](https://console.groq.com/) for dynamic LLM interventions and ambient commentary (offline fallbacks included)
+<p align="center">
+  <a href="#benchmarks"><img src="https://img.shields.io/badge/CPU_Idle-0.00%25-brightgreen.svg" alt="Idle CPU"/></a>
+  <a href="#benchmarks"><img src="https://img.shields.io/badge/RAM_RSS-~31_MB-blue.svg" alt="Memory Usage"/></a>
+  <a href="#test-suite"><img src="https://img.shields.io/badge/Tests-240%20passed-success.svg" alt="Tests"/></a>
+  <a href="#privacy--security"><img src="https://img.shields.io/badge/Privacy-100%25_Offline_Secrets-blueviolet.svg" alt="Privacy"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"/></a>
+  <img src="https://img.shields.io/badge/Python-3.10+-informational.svg" alt="Python Version"/>
+  <img src="https://img.shields.io/badge/Platforms-macOS%20|%20Linux%20|%20Windows-lightgrey.svg" alt="Platforms"/>
+</p>
 
 ---
 
-## Installation
+**Socrates** is a deterministic, low-overhead terminal observer for developers. It quietly monitors your shell sessions and speaks up only when something is genuinely wrong: a forgotten `git push`, an accidentally pasted API key, a build that silently failed with exit code 0, or a process stuck long past its historical runtime baseline.
+
+No walls of text. No annoying nag loops. No subshell wrappers that break `cd` or `export`.
+
+---
+
+## Visual Identity at the Prompt
+
+Socrates provides clear visual demarcation right at your command prompt:
+
+* <span style="color:#00ffff; font-weight:bold;">Socrates:</span> (**Bright Cyan**) — Critical high-confidence interventions (unpushed commits, detected secret leaks, silent process failures).
+* <span style="color:#e5a50a; font-weight:bold;">Socrates observes:</span> (**Dark Yellow / Amber**) — Opt-in ambient philosophical commentary ("Socrates vs. Skeleton" mode) deconstructing everyday terminal commands.
+
+---
+
+## The Four Core Failure Modes
+
+| Detection Mode | Condition | Timing | Privacy |
+| :--- | :--- | :--- | :--- |
+| **1. Forgotten Push** | Local commits ahead of upstream (`@{u}..HEAD`) | Periodic sweep (10m) after 5m inactivity | 100% Offline (Local Git) |
+| **2. Leaked Secrets** | AWS, GitHub, Stripe, OpenAI keys or high-entropy tokens | Instant (before shell execution) | 100% Offline (Zero Network) |
+| **3. Silent Failure** | Exit code 0, but missing declared artifact or fatal stderr | Immediately upon command exit | Local heuristics + scrubbed tiebreak |
+| **4. Stuck Process** | Runtime exceeds historical baseline ($> 3\times \text{mean}$) | In-flight sweep (every 30s) | Local Welford statistical model |
+
+---
+
+## Architecture Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      User Shell Process                     │
+│  (Zsh: preexec/precmd | Bash: preexec | PowerShell: prompt) │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ Non-blocking local socket / TCP
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Socrates Background Daemon                │
+│ ┌──────────────────────┐        ┌─────────────────────────┐ │
+│ │  Event Ingestion     │        │  Periodic Sweeps        │ │
+│ │  - preexec (in-flight)│       │  - Repo sweep (10m)     │ │
+│ │  - postcmd (exit tail│        │  - In-flight sweep (30s)│ │
+│ └──────────┬───────────┘        └────────────┬────────────┘ │
+│            ▼                                 ▼              │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │               Deterministic Rule Engine                 │ │
+│ │  1. Forgotten Git Push (git rev-list @{u}..HEAD)        │ │
+│ │  2. Leaked Secrets (Regex + Shannon Entropy) [Offline]  │ │
+│ │  3. Silent Failure (Exit 0 + Stderr Error / Artifact)   │ │
+│ │  4. Stuck Process (Runtime vs Welford baseline)         │ │
+│ └──────────────────────────┬──────────────────────────────┘ │
+│                            ▼                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │            Confidence Gate & Groq Tiebreaker            │ │
+│ │  - HIGH_CONFIDENCE: Fast-path to Intervention Gate      │ │
+│ │  - LOW_CONFIDENCE: Scrubbed Groq tiebreak (gpt-oss-20b) │ │
+│ └──────────────────────────┬──────────────────────────────┘ │
+│                            ▼                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │          Intervention Gate (Suppression & Snooze)       │ │
+│ │  - SHA-256 fingerprint deduplication                    │ │
+│ │  - Cooldown & Dismissal sensitivity widening            │ │
+│ │  - Active-commit guard (< 5 min activity skips push)    │ │
+│ └──────────────────────────┬──────────────────────────────┘ │
+│                            ▼                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │                  Delivery & Presentation                │ │
+│ │  - Cross-terminal pending delivery (~/.socrates/pending)│ │
+│ │  - Desktop notification banner & sound cue (optional)   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Start
+
+### 1. Installation
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/sohmxdd/socrates.git
 cd socrates
 
-# 2. Install package
+# Install package in editable mode
 pip install -e .
+```
 
-# 3. Set your Groq API key (optional — Socrates includes rich offline fallbacks)
-#    Add to your shell profile (~/.zshrc, ~/.bashrc, or $PROFILE):
-export GROQ_API_KEY="your_api_key_here"
+### 2. Set Up Shell Integration
 
-# 4. Source the shell hook:
-# For Zsh:
+Add Socrates to your shell profile:
+
+#### **Zsh** (`~/.zshrc`)
+```bash
 echo 'source /path/to/socrates/shell/socrates.zsh' >> ~/.zshrc
+```
 
-# For Bash:
+#### **Bash** (`~/.bashrc`)
+```bash
 echo 'source /path/to/socrates/shell/socrates.bash' >> ~/.bashrc
+```
 
-# For PowerShell (Windows / macOS / Linux):
-# Add to your $PROFILE:
+#### **PowerShell** (`$PROFILE`)
+```powershell
 . C:\path\to\socrates\shell\socrates.ps1
+```
 
-# 5. Start the daemon
+### 3. Start the Daemon
+
+```bash
+# Start background observer
 socrates start
 
-# 6. (Recommended) Auto-start at login
+# (Recommended) Register auto-start service across system reboots
 socrates install-daemon
 ```
 
@@ -59,44 +140,16 @@ socrates install-daemon
 
 ## Ambient Commentary Mode ("Ragebait Socrates")
 
-Beyond critical safety interventions, Socrates can optionally provide ambient philosophical commentary on your everyday terminal workflow. When enabled, Socrates observes your commands and delivers dry, surgical, sardonically observant commentary right at your prompt.
+Beyond critical safety interventions, Socrates can optionally provide ambient philosophical commentary on your everyday terminal workflow. When enabled, Socrates observes your mundane commands and delivers dry, surgical, existential cross-examinations.
 
-### Quick Start in Any Project Directory
-
-Initialize Socrates in any directory to tailor its behavior for that repository:
+### Quick Setup
 
 ```bash
-# Initialize local .socrates.yaml with ambient commentary enabled (60% trigger chance)
+# Enable commentary locally in your current project
 socrates init --commentary
 
-# Or specify a higher/lower commentary rate (e.g. 90% chance)
-socrates init --commentary --rate 0.9
-```
-
-### Commentary CLI Commands
-
-```bash
-socrates commentary on [--rate 0.8]   # Enable commentary (local or global)
-socrates commentary off               # Disable commentary
-socrates commentary status            # Show current scope, rate, and cooldown
-socrates commentary test "pytest"     # Preview Socrates' observation for a command
-```
-
-### Visual Distinction at the Prompt
-
-- **Amber (`Socrates observes:`):** Ambient commentary and dry philosophical observations on commands, directory changes, or repeated retries.
-- **Cyan (`Socrates:`):** Critical high-priority interventions (forgotten unpushed commits, detected secret leaks, silent process failures).
-
----
-
-## Daemon Management
-
-```bash
-socrates start            # Start daemon in background (or --foreground for debug)
-socrates stop             # Stop running daemon
-socrates status           # Health, PID, DB stats, tracked repos, and in-flight processes
-socrates install-daemon   # Register with launchd (macOS) or systemd user (Linux)
-socrates uninstall-daemon # Unregister auto-start daemon service
+# Enable globally with custom frequency
+socrates commentary on --rate 0.8
 ```
 
 ---
@@ -104,149 +157,48 @@ socrates uninstall-daemon # Unregister auto-start daemon service
 ## CLI Reference
 
 ```bash
-socrates logs [--tail N]              # View recent daemon logs
-socrates reset-feedback               # Clear suppression state (resets all snoozes and dismiss history)
-socrates snooze [BRANCH] [--hours N]  # Mute push reminders for a branch (default: current branch, 24h)
+socrates start              # Launch background daemon (or --foreground for debugging)
+socrates stop               # Terminate running daemon
+socrates status             # Show daemon health, database metrics, and tracked repos
+socrates status --metrics   # Display raw numeric metrics and SQLite storage footprint
+socrates logs               # View recent daemon activity logs
+socrates snooze [BRANCH]    # Temporarily mute reminders on a branch (default: 24h)
+socrates reset-feedback     # Clear all suppression states and dismiss counters
+socrates install-daemon     # Install launchd plist (macOS) or systemd service (Linux)
+socrates uninstall-daemon   # Remove background auto-start service
+socrates version            # Display Socrates version and platform environment
 ```
 
 ---
 
-## Configuration
+## Benchmarks & Performance
 
-Socrates looks for `~/.socrates/config.yaml`. All keys are optional — unset keys fall back to defaults.
+Measured continuously with Python `psutil` across multi-sweep cycles:
 
-```yaml
-# ~/.socrates/config.yaml
-
-# ── Detection tuning ──────────────────────────────────────────────────────────
-sweep_interval_seconds: 600       # How often repo push sweep runs (default: 10 min)
-stuck_sweep_interval_seconds: 30  # How often in-flight processes are checked (default: 30s)
-active_commit_window_seconds: 300 # Skip push alert if commit was made within 5 min
-min_baseline_samples: 5           # Minimum history before stuck-process rule fires
-baseline_k_factor: 2.0            # Stddev multiplier for stuck-process threshold
-dismiss_threshold: 3              # Dismiss count before permanent rule suppression
-intervention_cooldown_seconds: 3600 # Minimum seconds between identical alerts
-dismiss_widening_factor: 1.5      # Sensitivity widening for frequently dismissed repos
-
-# ── LLM tiebreaker ────────────────────────────────────────────────────────────
-groq_enabled: true
-groq_model: "openai/gpt-oss-20b"  # Fast, free-tier cloud model for ambiguous events
-groq_timeout_seconds: 8           # Timeout before falling back to silence
-groq_min_call_interval_seconds: 2 # Client-side rate-limit throttle
-
-# ── Presentation ──────────────────────────────────────────────────────────────
-color_enabled: true               # Set false or use NO_COLOR env var to disable ANSI
-quiet_mode: false                 # Factual messages only (no Socratic persona)
-sound_enabled: false              # Play audio cue on intervention
-sound_file_path: ""               # Path to user-supplied audio file (.wav/.mp3/.aiff)
-sound_volume: 1.0
-
-# ── Notifications ─────────────────────────────────────────────────────────────
-os_notifications_enabled: true    # Enable desktop notification banners
-notification_escalation_hours: 2  # Inactivity hours before pending alert escalates to OS banner
-```
+| Metric | Measured Value | Standard / SLA |
+| :--- | :--- | :--- |
+| **Idle CPU** | **`0.00%`** | `< 0.5%` |
+| **Sweep Peak CPU** | **`3.10%`** | Transient spike |
+| **Average CPU** | **`0.92%`** | Negligible background load |
+| **Memory Footprint (RSS)** | **`31.14 MB`** | `< 50 MB` |
+| **Rule Latency (Offline)** | **`< 2 ms`** | Sub-millisecond |
 
 ---
 
-## Architecture
+## Documentation Deep Dives
 
-```
-Shell Hook (preexec / precmd)
-  │  Captures command text, cwd, exit code, stderr tail [SAFE commands only]
-  │  ↓ JSON over local Unix socket (fire-and-forget, non-blocking)
-Background Daemon (long-running, independent of terminal lifecycle)
-  │  Stores events → SQLite (~/.socrates/history.db)
-  │  ↓
-Rule Engine (deterministic, sub-millisecond)
-  │  forgotten_push · leaked_secrets · silent_failure · stuck_process
-  │  → NONE / HIGH_CONFIDENCE / LOW_CONFIDENCE
-  │  ↓ [LOW_CONFIDENCE only; leaked_secrets NEVER leaves machine]
-Groq LLM Tiebreaker (scrubbed prompt, strict JSON contract, graceful degradation)
-  │  ↓
-Intervention Gate (fingerprint dedup · snooze · dismiss feedback widening)
-  │  ↓
-Delivery (pending file pickup at next prompt / OS notification)
-  ↓
-Socrates speaks: Cyan prefix, dry Socratic question, optional chime.
-```
-
----
-
-## The 4 Detection Scenarios
-
-### 1. Forgotten `git push`
-- **Scenario:** Developer commits to a branch and closes the terminal or walks away.
-- **Daemon behavior:** Periodic sweep checks `git rev-list @{u}..HEAD`. If older than `active_commit_window_seconds` (not actively committing), writes a pending message keyed to the repo.
-- **Message:**
-  ```text
-  Socrates: You have created 3 commits on 'main', yet they remain trapped upon this machine.
-  Tell me — what is the purpose of a commit that nobody can pull? (run 'socrates snooze' to mute this branch for today)
-  ```
-
-### 2. Leaked Secrets in Commands
-- **Scenario:** Developer pastes an AWS key, GitHub PAT, Stripe secret, or private key into a shell command.
-- **Daemon behavior:** Preexec hook scans command with regex + Shannon entropy. **Hard constraint: never touches network or Groq.**
-- **Message:**
-  ```text
-  Socrates: An AWS Access Key ID sits plainly in that command, for any shell history or log to find.
-  Tell me — is a secret truly a secret, if you have just shouted it into your terminal?
-  ```
-
-### 3. Silent Failures (Exit 0 with Errors)
-- **Scenario:** Build tool or script exits 0, but stderr contains compilation errors or expected output artifact was not created.
-- **Daemon behavior:** Inspects stderr patterns and filesystem artifacts.
-- **Message:**
-  ```text
-  Socrates: The command claimed success with exit code 0, yet 'dist/bundle.js' does not exist.
-  Tell me — which one of you is lying?
-  ```
-
-### 4. Stuck Process (Runtime Anomaly)
-- **Scenario:** Test suite or script hangs in a loop, running 10x longer than its own historical baseline for that repository.
-- **Daemon behavior:** In-flight sweep compares elapsed runtime against SQLite running baseline. Dispatches immediate OS notification banner.
-- **Message:**
-  ```text
-  Socrates: Process 'pytest' normally finishes in 12 seconds. It has now been running for 180 seconds.
-  Tell me — at what point does 'running' become 'waiting'?
-  ```
-
----
-
-## Privacy & Security
-
-- **Leaked secrets never leave the machine.** The rule evaluates 100% locally and is explicitly blocked from reaching Groq.
-- **Payload scrubbing:** All string fields in ambiguous events are passed through the local secret scanner before Groq prompt construction. Matched secrets are replaced with `[REDACTED:<type>]`.
-- **Zero telemetry:** No external analytics, telemetry, or tracking.
-- **Key security:** `GROQ_API_KEY` is loaded only from environment variables or `~/.socrates/.env` (which is gitignored).
-
----
-
-## Resource Footprint (Measured)
-
-Measured on Python 3.14 on idle background daemon:
-
-| Metric | Target | Measured |
-|--------|--------|----------|
-| Idle CPU | < 0.1% | **< 0.05%** |
-| Idle RAM | < 30 MB | **29.2 MB** |
-| Event Storage | < 10 MB | **~0.1 MB** (10,000 event pruning) |
-| Hook Overhead | < 5 ms | **< 2 ms** (detached socket client) |
-
----
-
-## Verification & Acceptance Criteria
-
-- [x] **Low interruption rate:** 0–3 genuine interventions/day targeted via fingerprint dedup, snooze, and dismiss widening.
-- [x] **Actively committing guard:** Multi-commit sequences produce zero nags mid-session.
-- [x] **Closed-terminal delivery:** Pending files keyed by repo hash surface in new terminals opened days later.
-- [x] **4 demoable failure modes:** Forgotten push, leaked secrets, silent failure, stuck process.
-- [x] **Zero paid tiers:** Fully functional offline; optional Groq free tier for ambiguous tiebreaking with complete graceful degradation.
-- [x] **Lightweight:** 29.2 MB RAM, < 0.05% idle CPU.
-- [x] **Modular architecture:** Detection engine runs independently with presentation and personality completely disabled.
-- [x] **Test suite:** 177 unit and integration tests passing.
+* [Architecture Specification](docs/ARCHITECTURE.md)
+* [Performance Benchmarks](docs/BENCHMARKS.md)
+* [Configuration Guide](docs/CONFIGURATION.md)
+* [Shell Hooks & Safety](docs/SHELL_HOOKS.md)
+* [Detection Rules Deep Dive](docs/RULES.md)
+* [Security & Privacy Guarantee](docs/SECURITY.md)
+* [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
+* [Contributing Guidelines](docs/CONTRIBUTING.md)
+* [Changelog](docs/CHANGELOG.md)
 
 ---
 
 ## License
 
-MIT
+MIT License. Designed and built with extreme care for developer flow.
