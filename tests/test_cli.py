@@ -30,6 +30,12 @@ class TestCliBasics:
         assert res.exit_code == 0
         assert "0.1.0" in res.output
 
+    def test_version_command(self) -> None:
+        runner = CliRunner()
+        res = runner.invoke(main, ["version"])
+        assert res.exit_code == 0
+        assert "Socrates v1.0.0" in res.output
+
 
 class TestCliStatus:
     def test_status_stopped(self) -> None:
