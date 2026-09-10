@@ -671,6 +671,13 @@ def commentary_test(cmd: str, exit_code: int, retries: int) -> None:
     print_commentary(comment, color_enabled=cfg.color_enabled)
 
 
+@main.command(name="version")
+def version() -> None:
+    """Show Socrates version and environment information."""
+    import platform
+    click.echo(f"Socrates v1.0.0 ({platform.system()} {platform.release()}) [Python {platform.python_version()}]")
+
+
 if __name__ == "__main__":
     main()
 
