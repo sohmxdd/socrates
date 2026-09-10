@@ -242,3 +242,7 @@ Write-Host "Socrates observer attached to PowerShell." -ForegroundColor Cyan
 Write-Host "Type " -NoNewline
 Write-Host "socrates status" -ForegroundColor Yellow -NoNewline
 Write-Host " to verify daemon connectivity."
+
+function global:Invoke-SocratesDoctor {
+    python (Join-Path (Split-Path -Parent $script:SocratesDir) "scripts\doctor.py")
+}

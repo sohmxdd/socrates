@@ -284,3 +284,7 @@ for path in files:
         print ""
     fi
 }
+
+_socrates_doctor() {
+    python3 "${_SOCRATES_SHELL_DIR}/../scripts/doctor.py"
+}
