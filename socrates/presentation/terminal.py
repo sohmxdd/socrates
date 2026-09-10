@@ -138,3 +138,27 @@ def print_commentary(
         safe_text = formatted.encode(encoding, errors="replace").decode(encoding)
         print(safe_text, file=stream)
 
+
+def render_badge(label: str, text: str, color_enabled: bool = True) -> str:
+    """Format a styled key-value badge for CLI status screens."""
+    use_color = should_use_color(color_enabled)
+    if use_color:
+        return f"{CYAN_BOLD}[{label}]{RESET} {text}"
+    return f"[{label}] {text}"
+
+
+def render_banner(color_enabled: bool = True) -> str:
+    """Return Socrates ASCII branding header."""
+    lines = [
+        "  ____                             _             ",
+        " / ___|  ___   ___ _ __ __ _  ___ | |_ ___  ___  ",
+        " \\___ \\ / _ \\ / __| '__/ _` |/ _ \\| __/ _ \\/ __| ",
+        "  ___) | (_) | (__| | | (_| | (_) | ||  __/\\__ \\ ",
+        " |____/ \\___/ \\___|_|  \\__,_|\\___/ \\__\\___||___/ ",
+    ]
+    banner = "\n".join(lines)
+    use_color = should_use_color(color_enabled)
+    if use_color:
+        return f"{CYAN_BOLD}{banner}{RESET}"
+    return banner
+
