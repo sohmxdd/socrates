@@ -1,0 +1,7 @@
+# Example: Quiet Mode Configuration (Ideal for CI and strict minimal environments)
+quiet_mode: true
+color_enabled: false
+commentary_enabled: false
+sound_enabled: false
+sweep_interval_seconds: 300
+active_commit_window_seconds: 120

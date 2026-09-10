@@ -1,0 +1,9 @@
+# Example: Maximum Ambient Commentary Configuration
+# Enables continuous Socratic philosophical mockery on almost every command
+commentary_enabled: true
+commentary_rate: 0.95
+commentary_cooldown_seconds: 3
+commentary_context_window: 8
+commentary_skip_commands:
+  - "clear"
+  - "cls"
