@@ -52,6 +52,7 @@ Traditional terminal tools either nag you constantly or do nothing until disaste
 - [Interactive Demo & Showcase](#interactive-demo--showcase)
 - [CLI Reference](#cli-reference-cheat-sheet)
 - [Benchmarks & Performance](#benchmarks--performance)
+- [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
 - [Documentation Deep Dives](#documentation-deep-dives)
 - [License](#license)
 
@@ -346,6 +347,45 @@ Benchmarked across primary development target operating systems:
 | **Ubuntu 22.04 LTS** | `x86_64` | AMD Ryzen 9 5900X (12-core) | 32 GB DDR4 | 3.12.2 |
 | **Windows 11 Pro** | `AMD64` | Intel Core i7-13700H | 32 GB LPDDR5 | 3.12.4 |
 
+
+---
+
+## Frequently Asked Questions (FAQ)
+
+<details>
+<summary><strong>Does Socrates send my code or shell history to external cloud servers?</strong></summary>
+<br/>
+
+**No.** All primary detection capabilities (secret interception, forgotten git push tracking, exit code 0 artifact verifications, and stuck process execution baselines) execute **100% locally and offline**. Only ambiguous silent failure logs or opt-in ambient commentary touch the Groq API (`gpt-oss-20b`), and all transmitted text is strictly scrubbed through an offline regex filter that masks API keys, tokens, passwords, and AWS ARNs into `[REDACTED:<type>]` before leaving your device.
+</details>
+
+<details>
+<summary><strong>Will Socrates interfere with <code>cd</code>, <code>export</code>, aliases, or programs like <code>vim</code>?</strong></summary>
+<br/>
+
+**Never.** Unlike aggressive shell assistants that wrap execution inside `sh -c` subshells or pipe stdout through `tee`, Socrates preserves the primary shell process directly. Native commands (`cd`, `source`, `export`) execute untampered. Interactive terminal applications (`vim`, `nvim`, `tmux`, `ssh`, `fzf`, `less`) are tagged `UNSAFE` in shell hooks and run nakedly with zero redirection or file-descriptor manipulation.
+</details>
+
+<details>
+<summary><strong>Can I turn off the ancient Greek philosophical persona and just get plain alerts?</strong></summary>
+<br/>
+
+**Yes.** Set `quiet_mode: true` in your `.socrates.yaml` or use `socrates init --quiet`. In quiet mode, Socrates strips all Socratic irony and outputs clean, minimal, colorized facts (e.g. `[Socrates] 3 unpushed commits on branch 'feature-auth'`).
+</details>
+
+<details>
+<summary><strong>How does Socrates notify me about unpushed commits if I close my terminal?</strong></summary>
+<br/>
+
+Socrates operates as a lightweight OS daemon (`launchd` on macOS, `systemd --user` on Linux, detached process on Windows). If you leave unpushed commits on a branch after your inactivity window (default: 5 minutes), the daemon writes a pending notification into `~/.socrates/pending`. The next time you open any terminal window on your machine, your shell's `precmd` hook picks up the alert and displays it immediately.
+</details>
+
+<details>
+<summary><strong>What is the actual system overhead of running the background daemon?</strong></summary>
+<br/>
+
+Socrates uses Python `asyncio` event loops that sleep on OS sockets. In active benchmarks, Socrates maintains **`0.00%` idle CPU**, averages **`0.92%` CPU** during multi-repo sweeps, and consumes **~31 MB of Resident Memory (RSS)**. It is imperceptible even on battery-constrained laptops.
+</details>
 
 ---
 
