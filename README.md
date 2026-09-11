@@ -54,6 +54,7 @@ Traditional terminal tools either nag you constantly or do nothing until disaste
 - [Benchmarks & Performance](#benchmarks--performance)
 - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
 - [Roadmap & Upcoming Enhancements](#roadmap--upcoming-enhancements)
+- [Community & Security](#community--security)
 - [Documentation Deep Dives](#documentation-deep-dives)
 - [License](#license)
 
@@ -421,6 +422,38 @@ Socrates uses Python `asyncio` event loops that sleep on OS sockets. In active b
 * [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
 * [Contributing Guidelines](docs/CONTRIBUTING.md)
 * [Changelog](docs/CHANGELOG.md)
+
+---
+
+## Community & Security
+
+### Contributing
+
+We welcome contributions from developers who care deeply about terminal ergonomics, deterministic performance, and minimalist tooling. Whether you are adding support for a new shell hook, optimizing an entropy calculation, or proposing a new failure mode:
+
+1. Review the [Contributing Guidelines](docs/CONTRIBUTING.md) for code styling and test requirements.
+2. Ensure all test suites pass locally via `pytest -v tests/` (all 249 tests passing).
+3. Submit a pull request with clear rationale and benchmark validations.
+
+### The Telemetry-Free Pledge
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║                      OUR ZERO-TELEMETRY PLEDGE                        ║
+║                                                                       ║
+║  Your shell is your personal sanctuary. Socrates will never track,   ║
+║  collect, phone home, or monetize your commands, keys, or metadata.   ║
+║  No analytics beacons. No session trackers. Ever.                     ║
+╚═══════════════════════════════════════════════════════════════════════╝
+```
+
+### Security & Vulnerability Reporting
+
+If you believe you have discovered a security vulnerability in Socrates (such as a regex bypass in the secret filter or an IPC socket permission issue):
+
+* **Do not open a public issue.**
+* Please review [Security & Privacy Guarantee](docs/SECURITY.md) and open a [Private GitHub Security Advisory](https://github.com/sohmxdd/socrates/security/advisories/new).
+* Vulnerability disclosures receive priority review and patches within 48 hours.
 
 ---
 
