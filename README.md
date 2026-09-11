@@ -101,6 +101,23 @@ Socrates provides clear visual demarcation right at your command prompt:
 
 ---
 
+## Non-Intrusive Prompt Lifecycle
+
+Socrates is engineered with a fundamental constraint: **never break developer muscle memory**.
+
+```
+User types command ──► [preexec Hook] ──► Host Shell Runs Command ──► [precmd Hook] ──► Next Prompt
+                             │                                             │
+               SAFE: Duplicates Stderr FD                     Restores Stderr FD & reads tail
+               UNSAFE: Naked execution (no FD change)         Delivers pending messages
+```
+
+* **No Subshell / Tee Wrapping**: Commands like `cd ..`, `export FOO=bar`, or activating a virtual environment execute directly inside your primary shell process.
+* **Curses & Interactive Isolation**: Full-screen programs (`vim`, `nvim`, `top`, `ssh`, `python`) are tagged `UNSAFE` and run with zero redirection or buffering.
+* **Non-Blocking IPC**: Events are dispatched over non-blocking local Unix domain sockets (`~/.socrates/daemon.sock`) or loopback TCP, adding `< 1ms` to your prompt return.
+
+---
+
 ## Architecture Flow
 
 ```
