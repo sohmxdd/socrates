@@ -276,6 +276,16 @@ Socrates integrates with your OS service manager to ensure background sweeps per
 
 ---
 
+## Privacy & Zero-Trust Architecture
+
+Your terminal commands and code never leave your machine unless specifically intended:
+
+* **100% Offline Secret Scanner**: Credentials, tokens, and private keys are matched via compiled regexes and Shannon entropy locally on your CPU. They **never** touch any network interface.
+* **Pre-Transmission Scrubbing**: If an ambiguous event is sent to Groq for tiebreaking (e.g. exit 0 with suspicious stderr keywords), `scrub_text()` redacts all secret-shaped patterns into `[REDACTED:<type>]` before sending.
+* **Zero Telemetry**: Socrates contains no analytics, no phone-home pings, and no crash reporter beacons.
+
+---
+
 ## Benchmarks & Performance
 
 Measured continuously with Python `psutil` across multi-sweep cycles:
