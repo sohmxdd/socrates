@@ -170,13 +170,18 @@ User types command ──► [preexec Hook] ──► Host Shell Runs Command �
 
 ### 1. Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/sohmxdd/socrates.git
-cd socrates
+Choose your preferred installation method:
 
-# Install package in editable mode
+```bash
+# Option A: Install via pip (recommended for local development)
 pip install -e .
+
+# Option B: Isolated installation via pipx (ideal for global CLI usage)
+pipx install .
+
+# Option C: Direct clone and install
+git clone https://github.com/sohmxdd/socrates.git
+cd socrates && pip install .
 ```
 
 ### 2. Set Up Shell Integration
