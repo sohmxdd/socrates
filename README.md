@@ -229,6 +229,25 @@ socrates init --commentary
 socrates commentary on --rate 0.8
 ```
 
+### Project Configuration (`.socrates.yaml`)
+
+Place a `.socrates.yaml` in any repository root to customize behavior per-project:
+
+```yaml
+# Ambient commentary tuning
+commentary_enabled: true
+commentary_rate: 0.75             # 75% chance to comment
+commentary_cooldown_seconds: 10   # Cooldown between comments per session
+commentary_skip_commands:
+  - "clear"
+  - "pwd"
+  - "exit"
+
+# Core detection overrides
+active_commit_window_seconds: 180 # 3 min activity window for git push checks
+dismiss_threshold: 2              # Suppress after 2 dismissals
+```
+
 ---
 
 ## CLI Reference
