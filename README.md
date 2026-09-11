@@ -264,6 +264,16 @@ dismiss_threshold: 2              # Suppress after 2 dismissals
 | `install` | `socrates install-daemon`| — | Register auto-start service (`launchd` on macOS, `systemd` on Linux) |
 | `version` | `socrates version` | — | Display build version, host operating system, and Python version |
 
+### Multi-Platform Auto-Start Services
+
+Socrates integrates with your OS service manager to ensure background sweeps persist across reboots:
+
+| Operating System | Service Manager | Configuration Path | Behavior |
+| :--- | :--- | :--- | :--- |
+| **macOS** | `launchd` | `~/Library/LaunchAgents/com.socrates.daemon.plist` | Auto-starts on login, `KeepAlive` restarts on crash |
+| **Linux** | `systemd --user` | `~/.config/systemd/user/socrates.service` | `WantedBy=default.target`, auto-restarts within 5s |
+| **Windows** | Windows Detached | Spawns with `CREATE_BREAKAWAY_FROM_JOB` | Persists when parent terminal window closes |
+
 ---
 
 ## Benchmarks & Performance
