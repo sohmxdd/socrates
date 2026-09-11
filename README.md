@@ -9,13 +9,15 @@
 </p>
 
 <p align="center">
-  <a href="#benchmarks"><img src="https://img.shields.io/badge/CPU_Idle-0.00%25-brightgreen.svg" alt="Idle CPU"/></a>
-  <a href="#benchmarks"><img src="https://img.shields.io/badge/RAM_RSS-~31_MB-blue.svg" alt="Memory Usage"/></a>
-  <a href="#test-suite"><img src="https://img.shields.io/badge/Tests-240%20passed-success.svg" alt="Tests"/></a>
-  <a href="#privacy--security"><img src="https://img.shields.io/badge/Privacy-100%25_Offline_Secrets-blueviolet.svg" alt="Privacy"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"/></a>
-  <img src="https://img.shields.io/badge/Python-3.10+-informational.svg" alt="Python Version"/>
-  <img src="https://img.shields.io/badge/Platforms-macOS%20|%20Linux%20|%20Windows-lightgrey.svg" alt="Platforms"/>
+  <a href="https://github.com/sohmxdd/socrates/releases"><img src="https://img.shields.io/badge/version-1.0.0-00ffff.svg?style=flat-square" alt="Version 1.0.0"/></a>
+  <a href="#benchmarks"><img src="https://img.shields.io/badge/CPU_Idle-0.00%25-brightgreen.svg?style=flat-square" alt="Idle CPU"/></a>
+  <a href="#benchmarks"><img src="https://img.shields.io/badge/RAM_RSS-~31_MB-blue.svg?style=flat-square" alt="Memory Usage"/></a>
+  <a href="tests"><img src="https://img.shields.io/badge/Tests-249_passed-success.svg?style=flat-square" alt="Tests"/></a>
+  <a href="docs/SECURITY.md"><img src="https://img.shields.io/badge/Privacy-100%25_Offline_Secrets-blueviolet.svg?style=flat-square" alt="Privacy"/></a>
+  <a href="docs/SECURITY.md"><img src="https://img.shields.io/badge/Telemetry-Zero-black.svg?style=flat-square" alt="Zero Telemetry"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License"/></a>
+  <img src="https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12%20|%203.13%20|%203.14-informational.svg?style=flat-square" alt="Python Version"/>
+  <img src="https://img.shields.io/badge/Platforms-macOS%20|%20Linux%20|%20Windows-lightgrey.svg?style=flat-square" alt="Platforms"/>
 </p>
 
 ---
