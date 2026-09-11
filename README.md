@@ -120,6 +120,10 @@ User types command ──► [preexec Hook] ──► Host Shell Runs Command �
 * **Curses & Interactive Isolation**: Full-screen programs (`vim`, `nvim`, `top`, `ssh`, `python`) are tagged `UNSAFE` and run with zero redirection or buffering.
 * **Non-Blocking IPC**: Events are dispatched over non-blocking local Unix domain sockets (`~/.socrates/daemon.sock`) or loopback TCP, adding `< 1ms` to your prompt return.
 
+> [!IMPORTANT]
+> **Zero Subshell Wrapping Guarantee**: Socrates never executes your commands inside child subshells or pipes stdout through tee. Native commands (`cd`, `export`, `source`) directly mutate the host shell environment without side effects. Interactive programs (`vim`, `ssh`, `fzf`) execute nakedly without buffering.
+
+
 ---
 
 ## Architecture Flow
@@ -207,6 +211,9 @@ echo 'source /path/to/socrates/shell/socrates.bash' >> ~/.bashrc
 . C:\path\to\socrates\shell\socrates.ps1
 ```
 
+> [!TIP]
+> After adding Socrates to your shell profile, run `_socrates_doctor` in any open shell to verify socket connectivity, hook registration, and stderr duplication status.
+
 ### 3. Start the Daemon
 
 ```bash
@@ -221,7 +228,11 @@ socrates install-daemon
 
 ## Ambient Commentary Mode ("Ragebait Socrates")
 
+> [!NOTE]
+> Ambient Commentary Mode is **strictly opt-in and disabled by default**. It is designed for developers who appreciate existential humor. It operates on an independent cooldown and rate-limiter, completely separated from core safety intervention accounting.
+
 Beyond critical safety interventions, Socrates can optionally provide ambient philosophical commentary on your everyday terminal workflow. When enabled, Socrates observes your mundane commands and delivers dry, surgical, existential cross-examinations.
+
 
 ### Quick Setup
 
@@ -312,6 +323,10 @@ Your terminal commands and code never leave your machine unless specifically int
 * **100% Offline Secret Scanner**: Credentials, tokens, and private keys are matched via compiled regexes and Shannon entropy locally on your CPU. They **never** touch any network interface.
 * **Pre-Transmission Scrubbing**: If an ambiguous event is sent to Groq for tiebreaking (e.g. exit 0 with suspicious stderr keywords), `scrub_text()` redacts all secret-shaped patterns into `[REDACTED:<type>]` before sending.
 * **Zero Telemetry**: Socrates contains no analytics, no phone-home pings, and no crash reporter beacons.
+
+> [!NOTE]
+> All secret scanning regexes and Shannon entropy algorithms execute entirely in-process on your local CPU. No command strings or raw tokens ever touch an external network connection.
+
 
 ---
 
