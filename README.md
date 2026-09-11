@@ -23,6 +23,23 @@
 **Socrates** is a deterministic, low-overhead terminal observer for developers. It quietly monitors your shell sessions and speaks up only when something is genuinely wrong: a forgotten `git push`, an accidentally pasted API key, a build that silently failed with exit code 0, or a process stuck long past its historical runtime baseline.
 
 No walls of text. No annoying nag loops. No subshell wrappers that break `cd` or `export`.
+<details>
+<summary><strong>Table of Contents</strong> (click to expand)</summary>
+
+- [Visual Identity at the Prompt](#visual-identity-at-the-prompt)
+- [The Four Core Failure Modes](#the-four-core-failure-modes)
+- [Architecture Flow](#architecture-flow)
+- [Quick Start](#quick-start)
+  - [1. Installation](#1-installation)
+  - [2. Shell Integration](#2-set-up-shell-integration)
+  - [3. Daemon Launch](#3-start-the-daemon)
+- [Ambient Commentary Mode ("Ragebait Socrates")](#ambient-commentary-mode-ragebait-socrates)
+- [CLI Reference](#cli-reference)
+- [Benchmarks & Performance](#benchmarks--performance)
+- [Documentation Deep Dives](#documentation-deep-dives)
+- [License](#license)
+
+</details>
 
 ---
 
