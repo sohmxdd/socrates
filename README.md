@@ -56,7 +56,7 @@ Traditional terminal tools either nag you constantly or do nothing until disaste
 - [Roadmap & Upcoming Enhancements](#roadmap--upcoming-enhancements)
 - [Community & Security](#community--security)
 - [Documentation Deep Dives](#documentation-deep-dives)
-- [License](#license)
+- [License & Acknowledgements](#license--acknowledgements)
 
 </details>
 
@@ -472,6 +472,21 @@ If you believe you have discovered a security vulnerability in Socrates (such as
 
 ---
 
-## License
+## License & Acknowledgements
 
-MIT License. Designed and built with extreme care for developer flow.
+This project is licensed under the terms of the **MIT License**. See [LICENSE](LICENSE) for full details.
+
+Developed with care for developers who respect their shell sessions and value undisturbed flow.
+
+<p align="center">
+  <em>"An unexamined shell history is not worth running."</em>
+  <br/><br/>
+  <a href="#socrates"><strong>↑ Back to Top</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/sohmxdd/socrates/stargazers"><img src="https://img.shields.io/github/stars/sohmxdd/socrates?style=social" alt="GitHub Stars"/></a>
+  <a href="https://github.com/sohmxdd/socrates/network/members"><img src="https://img.shields.io/github/forks/sohmxdd/socrates?style=social" alt="GitHub Forks"/></a>
+  <a href="https://github.com/sohmxdd/socrates/issues"><img src="https://img.shields.io/github/issues/sohmxdd/socrates?style=flat-square" alt="Issues"/></a>
+</p>
+
