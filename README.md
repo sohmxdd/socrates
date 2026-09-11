@@ -250,20 +250,19 @@ dismiss_threshold: 2              # Suppress after 2 dismissals
 
 ---
 
-## CLI Reference
+## CLI Reference Cheat Sheet
 
-```bash
-socrates start              # Launch background daemon (or --foreground for debugging)
-socrates stop               # Terminate running daemon
-socrates status             # Show daemon health, database metrics, and tracked repos
-socrates status --metrics   # Display raw numeric metrics and SQLite storage footprint
-socrates logs               # View recent daemon activity logs
-socrates snooze [BRANCH]    # Temporarily mute reminders on a branch (default: 24h)
-socrates reset-feedback     # Clear all suppression states and dismiss counters
-socrates install-daemon     # Install launchd plist (macOS) or systemd service (Linux)
-socrates uninstall-daemon   # Remove background auto-start service
-socrates version            # Display Socrates version and platform environment
-```
+| Command | Syntax | Primary Flags | What It Does |
+| :--- | :--- | :--- | :--- |
+| `start` | `socrates start` | `--foreground` | Launch background daemon (or run in foreground for logs) |
+| `stop` | `socrates stop` | — | Gracefully stop daemon process and unlink socket |
+| `status` | `socrates status` | `--metrics` | View daemon uptime, tracked git repos, and in-flight tasks |
+| `init` | `socrates init` | `--commentary`, `--rate 0.8` | Generate project-local `.socrates.yaml` in current folder |
+| `commentary` | `socrates commentary on` | `--rate`, `--cooldown` | Toggle or test ambient philosophical commentary |
+| `snooze` | `socrates snooze [branch]`| `--hours 24` | Mute reminders on a branch (defaults to current branch, 24h) |
+| `reset` | `socrates reset-feedback`| — | Reset all dismiss counters, sensitivity widening, & snoozes |
+| `install` | `socrates install-daemon`| — | Register auto-start service (`launchd` on macOS, `systemd` on Linux) |
+| `version` | `socrates version` | — | Display build version, host operating system, and Python version |
 
 ---
 
