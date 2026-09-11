@@ -80,6 +80,14 @@ Socrates provides clear visual demarcation right at your command prompt:
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### The Two Voices of Socrates
+
+1. **The Interventions (Cyan)**: Reserved for genuine dangers:
+   > **Socrates:** *Exit code zero. Stderr reporting a fatal authentication failure. These two facts cannot both be true, and yet here they are, coexisting peacefully in your shell history.*
+
+2. **The Socratic Cross-Examinations (Amber)**: The uninvited ancient philosopher deconstructing everyday developer delusions:
+   > **Socrates observes:** *Tell me, developer: do you run `git status` because you believe the working tree evolved since your keystroke fifteen seconds ago, or because contemplating actual logic fills you with dread?*
+
 ---
 
 ## The Four Core Failure Modes
