@@ -25,6 +25,19 @@
 **Socrates** is a deterministic, low-overhead terminal observer for developers. It quietly monitors your shell sessions and speaks up only when something is genuinely wrong: a forgotten `git push`, an accidentally pasted API key, a build that silently failed with exit code 0, or a process stuck long past its historical runtime baseline.
 
 No walls of text. No annoying nag loops. No subshell wrappers that break `cd` or `export`.
+
+## Why Socrates?
+
+Traditional terminal tools either nag you constantly or do nothing until disaster strikes. Socrates occupies the quiet middle ground:
+
+| Capability | Traditional Linters | Copilot / AI Chats | Shell History | **Socrates** |
+| :--- | :--- | :--- | :--- | :--- |
+| **Forgotten Git Push** | ❌ None | ❌ None | ❌ None | **✅ 10m sweep + inactivity guard** |
+| **Accidental Secret Paste** | ⚠️ Only in committed files | ❌ May exfiltrate in prompts | ❌ Permanently recorded | **✅ Blocked before/at execution** |
+| **Exit 0 Build Silent Failures**| ❌ Assumes 0 = success | ❌ Unaware of artifacts | ❌ Unaware | **✅ Verifies declared disk artifacts** |
+| **Hung/Stuck Background Tasks** | ❌ None | ❌ None | ❌ None | **✅ Compares vs historical baseline** |
+| **Subshell Wrapping Risk** | N/A | N/A | N/A | **✅ 100% Zero Subshell Wrappers** |
+| **Interruption Frequency** | 🔴 Constant warnings | 🔴 Interactive chat | ⚪ Passive log | **🟢 0–3 genuine alerts / day** |
 <details>
 <summary><strong>Table of Contents</strong> (click to expand)</summary>
 
