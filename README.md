@@ -49,7 +49,8 @@ Traditional terminal tools either nag you constantly or do nothing until disaste
   - [2. Shell Integration](#2-set-up-shell-integration)
   - [3. Daemon Launch](#3-start-the-daemon)
 - [Ambient Commentary Mode ("Ragebait Socrates")](#ambient-commentary-mode-ragebait-socrates)
-- [CLI Reference](#cli-reference)
+- [Interactive Demo & Showcase](#interactive-demo--showcase)
+- [CLI Reference](#cli-reference-cheat-sheet)
 - [Benchmarks & Performance](#benchmarks--performance)
 - [Documentation Deep Dives](#documentation-deep-dives)
 - [License](#license)
@@ -246,9 +247,34 @@ commentary_skip_commands:
 # Core detection overrides
 active_commit_window_seconds: 180 # 3 min activity window for git push checks
 dismiss_threshold: 2              # Suppress after 2 dismissals
+## Interactive Demo & Showcase
+
+Socrates ships with a built-in interactive simulator to test all interventions and commentary modes without touching real repository state:
+
+```bash
+# Run automated scenario walkthrough
+python scripts/demo.py
+
+# Launch interactive menu mode
+python scripts/demo.py --interactive
 ```
 
+The interactive menu lets you trigger, customize, and inspect each scenario individually:
+
+| Option | Scenario | What It Simulates |
+| :---: | :--- | :--- |
+| `[1]` | **Leaked Secret** | Entering an AWS/GitHub/Stripe key in the shell — intercepted instantly offline |
+| `[2]` | **Forgotten Git Push** | Unpushed commits detected across simulated inactivity window |
+| `[3]` | **Silent Failure** | `make release` exiting status 0 while expected target artifact is absent |
+| `[4]` | **Stuck Process** | Command running $> 10\times$ beyond its historical Welford baseline |
+| `[5]` | **Socratic vs Quiet** | Side-by-side comparison of philosophical intervention vs minimal factual text |
+| `[6]` | **Custom Command Test** | Type any custom bash/zsh string to verify Shannon entropy & regex filters |
+| `[7]` | **Ambient Commentary** | Live Groq philosophical cross-examination in amber ANSI styling |
+| `[8]` | **Desperate Retry Loop** | Repeated execution of failing commands mocked by Socratic irony |
+| `[A]` | **Run All Scenarios** | Sequential automated pass across all detection rules |
+
 ---
+
 
 ## CLI Reference Cheat Sheet
 
