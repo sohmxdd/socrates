@@ -53,6 +53,7 @@ Traditional terminal tools either nag you constantly or do nothing until disaste
 - [CLI Reference](#cli-reference-cheat-sheet)
 - [Benchmarks & Performance](#benchmarks--performance)
 - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+- [Roadmap & Upcoming Enhancements](#roadmap--upcoming-enhancements)
 - [Documentation Deep Dives](#documentation-deep-dives)
 - [License](#license)
 
@@ -386,6 +387,26 @@ Socrates operates as a lightweight OS daemon (`launchd` on macOS, `systemd --use
 
 Socrates uses Python `asyncio` event loops that sleep on OS sockets. In active benchmarks, Socrates maintains **`0.00%` idle CPU**, averages **`0.92%` CPU** during multi-repo sweeps, and consumes **~31 MB of Resident Memory (RSS)**. It is imperceptible even on battery-constrained laptops.
 </details>
+
+---
+
+## Roadmap & Upcoming Enhancements
+
+```
+  v1.0 (Shipped)                 v1.1 (Q4 2026)                 v1.2 (Q1 2027)
+┌───────────────────────┐      ┌───────────────────────┐      ┌───────────────────────┐
+│ • 4 Core Safety Rules │  ──► │ • Custom Rule Plugins │  ──► │ • WASM-Sandboxed Rules│
+│ • Zero-Subshell Hooks │      │ • Multi-Repo TUI HUD  │      │ • Team Policy Sync    │
+│ • Cross-Platform Daemon│     │ • Fish Shell Support  │      │ • 1Password/Bitwarden │
+│ • Socratic Ragebait   │      │ • Git Worktree Depth  │      │ • Distributed Sync    │
+└───────────────────────┘      └───────────────────────┘      └───────────────────────┘
+```
+
+| Milestone | Target | Focus Area | Key Deliverables |
+| :---: | :---: | :--- | :--- |
+| **v1.0** | **Current** | **Core Safety & Silence** | 4 deterministic rules, Zsh/Bash/PS prompt hooks, background daemon, offline entropy |
+| **v1.1** | *Q4 2026* | **Extensibility & TUI** | Plugin directory `~/.socrates/plugins/`, Rich/Textual terminal dashboard, Fish shell hook |
+| **v1.2** | *Q1 2027* | **Team Policies & Sandbox** | WebAssembly sandboxing for user rules, team-shared `.socrates.team.yaml`, secret manager vaults |
 
 ---
 
