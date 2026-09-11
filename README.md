@@ -33,6 +33,21 @@ Socrates provides clear visual demarcation right at your command prompt:
 * <span style="color:#00ffff; font-weight:bold;">Socrates:</span> (**Bright Cyan**) — Critical high-confidence interventions (unpushed commits, detected secret leaks, silent process failures).
 * <span style="color:#e5a50a; font-weight:bold;">Socrates observes:</span> (**Dark Yellow / Amber**) — Opt-in ambient philosophical commentary ("Socrates vs. Skeleton" mode) deconstructing everyday terminal commands.
 
+```text
+┌── terminal ────────────────────────────────────────────────────────────────────────┐
+│ $ git commit -m "fix auth token refresh"                                           │
+│ [main 8f3d12c] fix auth token refresh                                              │
+│                                                                                    │
+│ Socrates: Two commits sit on 'main', visible to no one.                            │
+│ Tell me — is code truly written if no remote ever receives it?                     │
+│                                                                                    │
+│ $ git diff                                                                         │
+│ Socrates observes: You just pulled a diff, as if the repository has developed       │
+│ self-awareness in the last twenty seconds.                                         │
+│ $                                                                                  │
+└────────────────────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## The Four Core Failure Modes
